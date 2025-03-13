@@ -1,5 +1,5 @@
-
-import { Calendar, Clock, Download, FileText, MessageSquare, Plus, Users } from 'lucide-react';
+import { useState } from 'react';
+import { Calendar, Clock, Download, FileText, MessageSquare, Plus, Users, Eye, PieChart } from 'lucide-react';
 import { format } from 'date-fns';
 import PageHeader from '@/components/shared/PageHeader';
 import DashboardMetricCard from '@/components/shared/DashboardMetricCard';
@@ -10,6 +10,9 @@ import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import CreateInterviewModal from '@/components/admin/CreateInterviewModal';
+import ManageInterviewersModal from '@/components/admin/ManageInterviewersModal';
+import GenerateReportModal from '@/components/admin/GenerateReportModal';
 
 // Mock data
 const mockInterviews: Omit<InterviewCardProps, 'viewerRole' | 'onView' | 'onJoin'>[] = [
@@ -115,6 +118,9 @@ const recentActivity = [
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [interviewersModalOpen, setInterviewersModalOpen] = useState(false);
+  const [reportModalOpen, setReportModalOpen] = useState(false);
 
   const handleViewInterview = (id: string) => {
     navigate(`/admin/interviews/${id}`);
@@ -129,18 +135,19 @@ export default function AdminDashboard() {
   };
 
   const handleCreateInterview = () => {
-    navigate('/admin/interviews/new');
+    setCreateModalOpen(true);
   };
 
   const handleViewAllInterviews = () => {
     navigate('/admin/interviews');
   };
 
+  const handleManageInterviewers = () => {
+    setInterviewersModalOpen(true);
+  };
+
   const handleGenerateReport = () => {
-    toast({
-      title: "Report Generated",
-      description: "Interview summary report has been exported as PDF.",
-    });
+    setReportModalOpen(true);
   };
 
   // Format the activity item based on type
@@ -324,20 +331,20 @@ export default function AdminDashboard() {
             <CardTitle className="text-lg font-medium">Quick Actions</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Button onClick={handleCreateInterview} className="w-full justify-start" variant="outline">
+            <Button onClick={handleCreateInterview} className="w-full justify-start" variant="info">
               <Plus className="mr-2 h-4 w-4" />
               Create New Interview
             </Button>
-            <Button onClick={handleViewAllInterviews} className="w-full justify-start" variant="outline">
-              <Calendar className="mr-2 h-4 w-4" />
+            <Button onClick={handleViewAllInterviews} className="w-full justify-start" variant="success">
+              <Eye className="mr-2 h-4 w-4" />
               View All Interviews
             </Button>
-            <Button onClick={() => navigate('/admin/users')} className="w-full justify-start" variant="outline">
+            <Button onClick={handleManageInterviewers} className="w-full justify-start" variant="warning">
               <Users className="mr-2 h-4 w-4" />
               Manage Interviewers
             </Button>
-            <Button onClick={handleGenerateReport} className="w-full justify-start" variant="outline">
-              <FileText className="mr-2 h-4 w-4" />
+            <Button onClick={handleGenerateReport} className="w-full justify-start" variant="action">
+              <PieChart className="mr-2 h-4 w-4" />
               Generate Report
             </Button>
           </CardContent>
@@ -391,6 +398,22 @@ export default function AdminDashboard() {
             ))}
         </div>
       </div>
+
+      {/* Modals */}
+      <CreateInterviewModal 
+        isOpen={createModalOpen} 
+        onClose={() => setCreateModalOpen(false)} 
+      />
+      
+      <ManageInterviewersModal 
+        isOpen={interviewersModalOpen} 
+        onClose={() => setInterviewersModalOpen(false)} 
+      />
+      
+      <GenerateReportModal 
+        isOpen={reportModalOpen} 
+        onClose={() => setReportModalOpen(false)} 
+      />
     </div>
   );
 }
