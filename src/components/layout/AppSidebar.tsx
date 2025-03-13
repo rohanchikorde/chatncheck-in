@@ -127,7 +127,7 @@ export default function AppSidebar() {
               {menuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton 
-                    active={location.pathname === item.path}
+                    isActive={location.pathname === item.path}
                     onClick={() => navigate(item.path)}
                   >
                     <item.icon className="h-4 w-4" />
