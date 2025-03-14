@@ -10,7 +10,7 @@ app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
 
 CSV_FILE = 'interviews.csv'
-CSV_HEADERS = ['id', 'candidate_name', 'interviewer_name', 'scheduled_at', 'status', 'feedback_submitted', 'job_role']
+CSV_HEADERS = ['id', 'candidate_name', 'interviewer_name', 'scheduled_at', 'status', 'feedback_submitted', 'job_role', 'format', 'duration']
 
 # Helper function to read CSV file
 def read_csv():
@@ -56,6 +56,10 @@ def get_interviews():
         date_start = request.args.get('date_start')
         date_end = request.args.get('date_end')
         search = request.args.get('search')
+        interview_id = request.args.get('id')
+        
+        if interview_id:
+            interviews = [i for i in interviews if i.get('id') == interview_id]
         
         if status:
             interviews = [i for i in interviews if i.get('status') == status]
@@ -119,6 +123,12 @@ def update_interview(id):
                 if 'feedback_submitted' in data:
                     interview['feedback_submitted'] = data['feedback_submitted']
                 
+                # Update optional fields if provided
+                if 'format' in data:
+                    interview['format'] = data['format']
+                if 'duration' in data:
+                    interview['duration'] = data['duration']
+                
                 write_csv(interviews)
                 return jsonify(interview)
         
@@ -179,7 +189,9 @@ def create_interview():
             'scheduled_at': data['scheduled_at'],
             'status': data['status'],
             'feedback_submitted': data.get('feedback_submitted', 'No'),
-            'job_role': data['job_role']
+            'job_role': data['job_role'],
+            'format': data.get('format', ''),
+            'duration': data.get('duration', '')
         }
         
         interviews.append(new_interview)

@@ -28,7 +28,7 @@ import {
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { format, parse } from "date-fns";
+import { format } from "date-fns";
 import { CalendarIcon, Upload } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -37,6 +37,7 @@ import { useNavigate } from "react-router-dom";
 interface CreateInterviewModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onInterviewCreated?: () => void;
 }
 
 const formSchema = z.object({
@@ -76,6 +77,7 @@ const interviewers = [
 export default function CreateInterviewModal({
   isOpen,
   onClose,
+  onInterviewCreated,
 }: CreateInterviewModalProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
@@ -108,6 +110,9 @@ export default function CreateInterviewModal({
         scheduled_at: dateTimeString,
         status: "Scheduled",
         job_role: data.jobRole,
+        feedback_submitted: "No",
+        format: data.format,
+        duration: data.duration
       };
       
       console.log("Sending interview data to backend:", interviewData);
@@ -138,6 +143,11 @@ export default function CreateInterviewModal({
       // Reset form and close modal
       form.reset();
       onClose();
+      
+      // Call the callback function if provided
+      if (onInterviewCreated) {
+        onInterviewCreated();
+      }
       
       // Navigate to interviews page to see the new interview
       navigate("/admin/interviews");

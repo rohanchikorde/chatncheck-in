@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { format, parseISO } from "date-fns";
@@ -24,6 +25,8 @@ interface Interview {
   status: string;
   feedback_submitted: string;
   job_role: string;
+  format?: string;
+  duration?: string;
 }
 
 export default function InterviewsPage() {
@@ -117,6 +120,12 @@ export default function InterviewsPage() {
     }
   };
 
+  // Function to handle interview creation
+  const handleInterviewCreated = () => {
+    // Refresh the interviews list
+    fetchInterviews();
+  };
+
   // Function to clear all filters
   const clearFilters = () => {
     setStatusFilter("");
@@ -139,14 +148,16 @@ export default function InterviewsPage() {
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-4 items-end">
         <div className="grid w-full sm:w-auto gap-1.5">
-          <Input
-            placeholder="Search by name or job role..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full sm:w-[300px]"
-          />
-          <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-            <Search className="h-4 w-4 opacity-50" />
+          <div className="relative">
+            <Input
+              placeholder="Search by name or job role..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full sm:w-[300px] pl-10"
+            />
+            <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+              <Search className="h-4 w-4 opacity-50" />
+            </div>
           </div>
         </div>
         
@@ -278,7 +289,8 @@ export default function InterviewsPage() {
 
       <CreateInterviewModal 
         isOpen={createModalOpen} 
-        onClose={() => setCreateModalOpen(false)} 
+        onClose={() => setCreateModalOpen(false)}
+        onInterviewCreated={handleInterviewCreated}
       />
     </div>
   );
