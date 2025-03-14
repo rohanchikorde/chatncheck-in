@@ -8,7 +8,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from flask_jwt_extended import JWTManager, create_access_token, get_jwt_identity, jwt_required
 
 app = Flask(__name__)
-CORS(app)
+CORS(app) 
 
 # Configuration
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///interviews.db'
