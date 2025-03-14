@@ -7,7 +7,8 @@ from datetime import datetime
 from flask_cors import CORS
 
 app = Flask(__name__)
-CORS(app)  # Enable CORS for all routes
+# Enable CORS for all routes with proper configuration
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 CSV_FILE = 'interviews.csv'
 CSV_HEADERS = ['id', 'candidate_name', 'interviewer_name', 'scheduled_at', 'status', 'feedback_submitted', 'job_role', 'format', 'duration']
@@ -48,6 +49,7 @@ def validate_date(date_string):
 @app.route('/interviews', methods=['GET'])
 def get_interviews():
     try:
+        app.logger.info("Received GET request for interviews")
         interviews = read_csv()
         
         # Apply filters from query parameters
@@ -86,9 +88,11 @@ def get_interviews():
         # Sort by scheduled_at (default: ascending)
         interviews.sort(key=lambda x: x.get('scheduled_at', ''))
         
+        app.logger.info(f"Returning {len(interviews)} interviews")
         return jsonify(interviews)
     
     except Exception as e:
+        app.logger.error(f"Error in get_interviews: {str(e)}")
         return make_response(jsonify({"error": str(e)}), 500)
 
 # PUT /interviews/<id> - Edit an interview
@@ -135,6 +139,7 @@ def update_interview(id):
         return make_response(jsonify({"error": "Interview not found"}), 404)
     
     except Exception as e:
+        app.logger.error(f"Error in update_interview: {str(e)}")
         return make_response(jsonify({"error": str(e)}), 500)
 
 # DELETE /interviews/<id> - Delete an interview
@@ -154,6 +159,7 @@ def delete_interview(id):
         return jsonify({"message": "Interview deleted"})
     
     except Exception as e:
+        app.logger.error(f"Error in delete_interview: {str(e)}")
         return make_response(jsonify({"error": str(e)}), 500)
 
 # POST /interviews - Create a new interview
@@ -161,6 +167,7 @@ def delete_interview(id):
 def create_interview():
     try:
         data = request.get_json()
+        app.logger.info(f"Received POST request with data: {data}")
         
         # Validate required fields
         required_fields = ['candidate_name', 'interviewer_name', 'scheduled_at', 'status', 'job_role']
@@ -197,9 +204,11 @@ def create_interview():
         interviews.append(new_interview)
         write_csv(interviews)
         
+        app.logger.info(f"Successfully created interview with ID: {new_id}")
         return jsonify(new_interview), 201
     
     except Exception as e:
+        app.logger.error(f"Error in create_interview: {str(e)}")
         return make_response(jsonify({"error": str(e)}), 500)
 
 # Initialize the CSV file if it doesn't exist
@@ -211,4 +220,5 @@ def initialize_csv():
 
 if __name__ == '__main__':
     initialize_csv()
-    app.run(debug=True, port=5000)
+    print("Server running on http://localhost:5000")
+    app.run(debug=True, host='0.0.0.0', port=5000)

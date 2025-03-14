@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { format, parseISO } from "date-fns";
-import { Plus, Search, Filter, X } from "lucide-react";
+import { Plus, Search, Filter, X, AlertTriangle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -12,9 +12,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import PageHeader from "@/components/shared/PageHeader";
 import { useToast } from "@/hooks/use-toast";
 import CreateInterviewModal from "@/components/admin/CreateInterviewModal";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 // Interviews interface
 interface Interview {
@@ -28,6 +37,9 @@ interface Interview {
   format?: string;
   duration?: string;
 }
+
+// API URL for interviews
+const API_URL = "http://localhost:5000/interviews";
 
 export default function InterviewsPage() {
   const [interviews, setInterviews] = useState<Interview[]>([]);
@@ -55,19 +67,22 @@ export default function InterviewsPage() {
     if (searchQuery) params.append("search", searchQuery);
     
     try {
-      const response = await fetch(`http://localhost:5000/interviews?${params.toString()}`);
+      console.log(`Fetching interviews from: ${API_URL}?${params.toString()}`);
+      const response = await fetch(`${API_URL}?${params.toString()}`);
       
       if (!response.ok) {
-        throw new Error("Failed to fetch interviews");
+        throw new Error(`Server returned ${response.status}: ${response.statusText}`);
       }
       
       const data = await response.json();
+      console.log("Fetched interviews:", data);
       setInterviews(data);
     } catch (err) {
-      setError("Error loading interviews. Please try again.");
+      console.error("Error fetching interviews:", err);
+      setError("Failed to connect to the interview server. Please ensure the server is running.");
       toast({
-        title: "Error",
-        description: "Failed to load interviews",
+        title: "Connection Error",
+        description: "Failed to load interviews. Please check if the server is running.",
         variant: "destructive",
       });
     } finally {
@@ -96,7 +111,7 @@ export default function InterviewsPage() {
     }
     
     try {
-      const response = await fetch(`http://localhost:5000/interviews/${id}`, {
+      const response = await fetch(`${API_URL}/${id}`, {
         method: "DELETE",
       });
       
@@ -112,9 +127,10 @@ export default function InterviewsPage() {
       // Refresh interviews
       fetchInterviews();
     } catch (error) {
+      console.error("Error deleting interview:", error);
       toast({
         title: "Error",
-        description: "Failed to delete the interview",
+        description: "Failed to delete the interview. Please try again.",
         variant: "destructive",
       });
     }
@@ -124,6 +140,10 @@ export default function InterviewsPage() {
   const handleInterviewCreated = () => {
     // Refresh the interviews list
     fetchInterviews();
+    toast({
+      title: "Success",
+      description: "Interview has been successfully created and saved.",
+    });
   };
 
   // Function to clear all filters
@@ -131,6 +151,17 @@ export default function InterviewsPage() {
     setStatusFilter("");
     setInterviewerFilter("");
     setSearchQuery("");
+  };
+
+  // Function to get unique interviewers from the data
+  const getUniqueInterviewers = () => {
+    const interviewers = new Set<string>();
+    interviews.forEach(interview => {
+      if (interview.interviewer_name) {
+        interviewers.add(interview.interviewer_name);
+      }
+    });
+    return Array.from(interviewers);
   };
 
   return (
@@ -144,6 +175,24 @@ export default function InterviewsPage() {
           Create Interview
         </Button>
       </PageHeader>
+
+      {/* Connection Error Alert */}
+      {error && (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription className="flex justify-between items-center">
+            <span>{error}</span>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={fetchInterviews}
+            >
+              <RefreshCw className="mr-1 h-3 w-3" />
+              Retry
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-4 items-end">
@@ -182,9 +231,11 @@ export default function InterviewsPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="">All Interviewers</SelectItem>
-              <SelectItem value="Isha Patel">Isha Patel</SelectItem>
-              <SelectItem value="Michael Chen">Michael Chen</SelectItem>
-              <SelectItem value="Alex Rivera">Alex Rivera</SelectItem>
+              {getUniqueInterviewers().map(interviewer => (
+                <SelectItem key={interviewer} value={interviewer}>
+                  {interviewer}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -223,29 +274,26 @@ export default function InterviewsPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b bg-muted/50">
-                  <th className="py-3 px-4 text-left font-medium">Candidate</th>
-                  <th className="py-3 px-4 text-left font-medium">Interviewer</th>
-                  <th className="py-3 px-4 text-left font-medium">Date & Time</th>
-                  <th className="py-3 px-4 text-left font-medium">Job Role</th>
-                  <th className="py-3 px-4 text-left font-medium">Status</th>
-                  <th className="py-3 px-4 text-left font-medium">Feedback</th>
-                  <th className="py-3 px-4 text-right font-medium">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Candidate</TableHead>
+                  <TableHead>Interviewer</TableHead>
+                  <TableHead>Date & Time</TableHead>
+                  <TableHead>Job Role</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Feedback</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {interviews.map((interview) => (
-                  <tr 
-                    key={interview.id} 
-                    className="border-b hover:bg-muted/50 transition-colors"
-                  >
-                    <td className="py-3 px-4">{interview.candidate_name}</td>
-                    <td className="py-3 px-4">{interview.interviewer_name}</td>
-                    <td className="py-3 px-4">{formatDate(interview.scheduled_at)}</td>
-                    <td className="py-3 px-4">{interview.job_role}</td>
-                    <td className="py-3 px-4">
+                  <TableRow key={interview.id}>
+                    <TableCell>{interview.candidate_name}</TableCell>
+                    <TableCell>{interview.interviewer_name}</TableCell>
+                    <TableCell>{formatDate(interview.scheduled_at)}</TableCell>
+                    <TableCell>{interview.job_role}</TableCell>
+                    <TableCell>
                       <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
                         interview.status === "Completed" 
                           ? "bg-green-100 text-green-800" 
@@ -255,15 +303,15 @@ export default function InterviewsPage() {
                       }`}>
                         {interview.status}
                       </span>
-                    </td>
-                    <td className="py-3 px-4">
+                    </TableCell>
+                    <TableCell>
                       {interview.feedback_submitted === "Yes" ? (
                         <span className="text-green-600 font-medium">Submitted</span>
                       ) : (
                         <span className="text-amber-600 font-medium">Pending</span>
                       )}
-                    </td>
-                    <td className="py-3 px-4 text-right space-x-2">
+                    </TableCell>
+                    <TableCell className="text-right space-x-2">
                       <Button 
                         variant="outline" 
                         size="sm" 
@@ -278,11 +326,11 @@ export default function InterviewsPage() {
                       >
                         Delete
                       </Button>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         )}
       </div>
