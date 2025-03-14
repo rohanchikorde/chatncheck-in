@@ -1,0 +1,5 @@
+id,candidate_name,interviewer_name,scheduled_at,status,feedback_submitted,job_role,duration,format
+1,John Doe,Isha Patel,2025-03-14T16:00Z,Completed,Yes,Software Engineer,1 hour,In-person
+2,John Doe,Isha Patel,2025-03-15T14:00Z,Scheduled,No,Backend Developer,1 hour,Online
+3,Alice Smith,Michael Chen,2025-03-16T10:00Z,Scheduled,No,UX Designer,45 mins,In-person
+4,Bob Wilson,Alex Rivera,2025-03-17T11:30Z,Scheduled,No,Product Manager,1.5 hours,Phone
