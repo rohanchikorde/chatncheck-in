@@ -1,69 +1,87 @@
-# Welcome to your Lovable project
 
-## Project info
+# InterviewSync Backend
 
-**URL**: https://lovable.dev/projects/93b2b330-51d5-4734-b2ec-8dd99a601df8
+A lightweight Python Flask backend for the "InterviewSync" portal's "View All Interviews" page.
 
-## How can I edit this code?
+## Overview
 
-There are several ways of editing your application.
+This backend provides API endpoints to:
+- Fetch all interviews with filtering options
+- Create new interviews
+- Edit existing interviews
+- Delete interviews
 
-**Use Lovable**
+Data is temporarily stored in a CSV file (`interviews.csv`), with plans to transition to a database in the future.
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/93b2b330-51d5-4734-b2ec-8dd99a601df8) and start prompting.
+## Setup
 
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+1. Install dependencies:
+```
+pip install -r requirements.txt
 ```
 
-**Edit a file directly in GitHub**
+2. Run the server:
+```
+python server.py
+```
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+The server will run on port 5000 by default.
 
-**Use GitHub Codespaces**
+## API Endpoints
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+### GET /interviews
+Fetch all interviews with optional filtering.
 
-## What technologies are used for this project?
+Query parameters:
+- `status`: Filter by interview status (e.g., "Scheduled", "Completed")
+- `interviewer_name`: Filter by interviewer
+- `date_start`: Filter by start date (ISO format)
+- `date_end`: Filter by end date (ISO format)
+- `search`: Search in candidate name, interviewer name, or job role
 
-This project is built with .
+### POST /interviews
+Create a new interview.
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+Request body:
+```json
+{
+  "candidate_name": "Sam Patel",
+  "interviewer_name": "Isha Gupta",
+  "scheduled_at": "2025-03-15T10:00:00Z",
+  "status": "Scheduled",
+  "job_role": "Frontend Developer"
+}
+```
 
-## How can I deploy this project?
+### PUT /interviews/<id>
+Edit an existing interview.
 
-Simply open [Lovable](https://lovable.dev/projects/93b2b330-51d5-4734-b2ec-8dd99a601df8) and click on Share -> Publish.
+Request body:
+```json
+{
+  "candidate_name": "Sam Patel",
+  "interviewer_name": "Isha Gupta",
+  "scheduled_at": "2025-03-15T11:00:00Z",
+  "status": "Scheduled",
+  "job_role": "Frontend Developer",
+  "feedback_submitted": "No"
+}
+```
 
-## I want to use a custom domain - is that possible?
+### DELETE /interviews/<id>
+Delete an interview.
 
-We don't support custom domains (yet). If you want to deploy your project under your own domain then we recommend using Netlify. Visit our docs for more details: [Custom domains](https://docs.lovable.dev/tips-tricks/custom-domain/)
+## CSV Structure
+
+The `interviews.csv` file has the following structure:
+- `id`: Unique identifier for the interview
+- `candidate_name`: Name of the candidate
+- `interviewer_name`: Name of the interviewer
+- `scheduled_at`: Date and time of the interview (ISO format)
+- `status`: Status of the interview (e.g., "Scheduled", "Completed")
+- `feedback_submitted`: Whether feedback has been submitted ("Yes" or "No")
+- `job_role`: Role the candidate is interviewing for
+
+## Future Plans
+
+This backend is designed for easy transition to a database system like PostgreSQL in the future, replacing the CSV storage with database queries.
