@@ -28,10 +28,11 @@ import {
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { format } from "date-fns";
+import { format, parse } from "date-fns";
 import { CalendarIcon, Upload } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 
 interface CreateInterviewModalProps {
   isOpen: boolean;
@@ -78,6 +79,7 @@ export default function CreateInterviewModal({
 }: CreateInterviewModalProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -91,12 +93,41 @@ export default function CreateInterviewModal({
   const onSubmit = async (data: FormValues) => {
     setIsLoading(true);
     
-    // Simulate API call
     try {
-      console.log("Form data submitted:", data);
+      // Format date and time into ISO format
+      const timeString = data.time;
+      const dateObj = data.date;
       
-      // Simulate network delay
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // Combine date and time
+      const dateTimeString = `${format(dateObj, "yyyy-MM-dd")}T${timeString}:00Z`;
+      
+      // Map form data to API format
+      const interviewData = {
+        candidate_name: data.candidateName,
+        interviewer_name: interviewers.find(i => i.id === data.interviewer)?.name || "",
+        scheduled_at: dateTimeString,
+        status: "Scheduled",
+        job_role: data.jobRole,
+      };
+      
+      console.log("Sending interview data to backend:", interviewData);
+      
+      // Send data to backend API
+      const response = await fetch("http://localhost:5000/interviews", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(interviewData),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to create interview");
+      }
+      
+      const responseData = await response.json();
+      console.log("Interview created successfully:", responseData);
       
       // Success notification
       toast({
@@ -107,14 +138,17 @@ export default function CreateInterviewModal({
       // Reset form and close modal
       form.reset();
       onClose();
+      
+      // Navigate to interviews page to see the new interview
+      navigate("/admin/interviews");
     } catch (error) {
       // Error notification
+      console.error("Error creating interview:", error);
       toast({
         title: "Error",
-        description: "Failed to create interview. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to create interview. Please try again.",
         variant: "destructive",
       });
-      console.error("Error submitting form:", error);
     } finally {
       setIsLoading(false);
     }
