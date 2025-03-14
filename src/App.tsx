@@ -6,6 +6,7 @@ import Shell from './components/layout/Shell';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import InterviewsPage from './pages/admin/InterviewsPage';
 import InterviewDetailPage from './pages/admin/InterviewDetailPage';
+import UsersPage from './pages/admin/UsersPage';
 import NotFound from './pages/NotFound';
 
 function App() {
@@ -20,6 +21,7 @@ function App() {
           <Route path="dashboard" element={<AdminDashboard />} />
           <Route path="interviews" element={<InterviewsPage />} />
           <Route path="interviews/:id" element={<InterviewDetailPage />} />
+          <Route path="users" element={<UsersPage />} />
         </Route>
 
         <Route path="*" element={<NotFound />} />
