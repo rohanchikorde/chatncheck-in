@@ -18,7 +18,8 @@ FEEDBACK_FILE = 'feedback.csv'
 INTERVIEW_HEADERS = ['id', 'candidate_name', 'interviewer_name', 'scheduled_at', 'status', 
                     'feedback_submitted', 'job_role', 'format', 'duration']
 USER_HEADERS = ['id', 'name', 'email', 'role', 'status', 'last_active']
-FEEDBACK_HEADERS = ['id', 'interview_id', 'rating', 'comments', 'submitted_by', 'submitted_at']
+FEEDBACK_HEADERS = ['id', 'interview_id', 'rating', 'comments', 'submitted_by', 'submitted_at',
+                   'problem_solving', 'communication']
 
 # Helper function to read CSV file
 def read_csv(file_path, headers):
@@ -410,7 +411,7 @@ def create_feedback():
         data = request.get_json()
         
         # Validate required fields
-        required_fields = ['interview_id', 'rating', 'comments', 'submitted_by']
+        required_fields = ['interview_id', 'comments', 'submitted_by', 'problem_solving', 'communication']
         for field in required_fields:
             if field not in data:
                 return make_response(jsonify({"error": f"Missing required field: {field}"}), 400)
@@ -439,10 +440,12 @@ def create_feedback():
         new_feedback = {
             'id': new_id,
             'interview_id': data['interview_id'],
-            'rating': data['rating'],
+            'rating': data.get('rating', ''),
             'comments': data['comments'],
             'submitted_by': data['submitted_by'],
-            'submitted_at': now
+            'submitted_at': now,
+            'problem_solving': str(data['problem_solving']),
+            'communication': str(data['communication'])
         }
         
         feedback_entries.append(new_feedback)
@@ -456,6 +459,213 @@ def create_feedback():
     
     except Exception as e:
         app.logger.error(f"Error in create_feedback: {str(e)}")
+        return make_response(jsonify({"error": str(e)}), 500)
+
+# API Routes for Interviewer
+# GET /interviewer/interviews - Fetch interviews for a specific interviewer
+@app.route('/interviewer/interviews', methods=['GET'])
+def get_interviewer_interviews():
+    try:
+        interviewer_name = request.args.get('interviewer_name', 'Isha Gupta')  # Default for demo
+        status = request.args.get('status')
+        date_start = request.args.get('date_start')
+        date_end = request.args.get('date_end')
+        
+        interviews = read_csv(INTERVIEWS_FILE, INTERVIEW_HEADERS)
+        
+        # Filter by interviewer
+        interviews = [i for i in interviews if i.get('interviewer_name') == interviewer_name]
+        
+        # Apply additional filters
+        if status:
+            interviews = [i for i in interviews if i.get('status') == status]
+        
+        if date_start:
+            if not validate_date(date_start):
+                return make_response(jsonify({"error": "Invalid date_start format"}), 400)
+            interviews = [i for i in interviews if i.get('scheduled_at') >= date_start]
+        
+        if date_end:
+            if not validate_date(date_end):
+                return make_response(jsonify({"error": "Invalid date_end format"}), 400)
+            interviews = [i for i in interviews if i.get('scheduled_at') <= date_end]
+        
+        # Sort by date
+        interviews.sort(key=lambda x: x.get('scheduled_at', ''))
+        
+        return jsonify(interviews)
+    
+    except Exception as e:
+        app.logger.error(f"Error in get_interviewer_interviews: {str(e)}")
+        return make_response(jsonify({"error": str(e)}), 500)
+
+# POST /interviewer/interviews/<id>/feedback - Submit feedback for an interview
+@app.route('/interviewer/interviews/<id>/feedback', methods=['POST'])
+def submit_interviewer_feedback(id):
+    try:
+        data = request.get_json()
+        interviewer_name = data.get('submitted_by', 'Isha Gupta')  # Default for demo
+        
+        # Validate required fields
+        required_fields = ['problem_solving', 'communication', 'comments']
+        for field in required_fields:
+            if field not in data:
+                return make_response(jsonify({"error": f"Missing required field: {field}"}), 400)
+        
+        # Check if interview exists and is completed
+        interviews = read_csv(INTERVIEWS_FILE, INTERVIEW_HEADERS)
+        interview = next((i for i in interviews if i['id'] == id), None)
+        
+        if not interview:
+            return make_response(jsonify({"error": "Interview not found"}), 404)
+        
+        if interview.get('status') != 'Completed':
+            return make_response(jsonify({"error": "Cannot submit feedback for an interview that is not completed"}), 400)
+        
+        if interview.get('feedback_submitted') == 'Yes':
+            return make_response(jsonify({"error": "Feedback already submitted for this interview"}), 400)
+        
+        # Update interview to mark feedback as submitted
+        interview['feedback_submitted'] = 'Yes'
+        write_csv(INTERVIEWS_FILE, interviews, INTERVIEW_HEADERS)
+        
+        # Create new feedback entry
+        feedback_data = {
+            'interview_id': id,
+            'problem_solving': data['problem_solving'],
+            'communication': data['communication'],
+            'comments': data['comments'],
+            'submitted_by': interviewer_name
+        }
+        
+        # Add to feedback CSV
+        feedback_entries = read_csv(FEEDBACK_FILE, FEEDBACK_HEADERS)
+        new_id = generate_id(feedback_entries)
+        now = datetime.now().isoformat()
+        
+        new_feedback = {
+            'id': new_id,
+            'interview_id': id,
+            'rating': '',  # Legacy field, using separate scores now
+            'comments': data['comments'],
+            'submitted_by': interviewer_name,
+            'submitted_at': now,
+            'problem_solving': str(data['problem_solving']),
+            'communication': str(data['communication'])
+        }
+        
+        feedback_entries.append(new_feedback)
+        write_csv(FEEDBACK_FILE, feedback_entries, FEEDBACK_HEADERS)
+        
+        return jsonify({"message": "Feedback submitted successfully"}), 201
+    
+    except Exception as e:
+        app.logger.error(f"Error in submit_interviewer_feedback: {str(e)}")
+        return make_response(jsonify({"error": str(e)}), 500)
+
+# GET /interviewer/feedback - Get feedback submitted by an interviewer
+@app.route('/interviewer/feedback', methods=['GET'])
+def get_interviewer_feedback():
+    try:
+        interviewer_name = request.args.get('interviewer_name', 'Isha Gupta')  # Default for demo
+        
+        feedback_entries = read_csv(FEEDBACK_FILE, FEEDBACK_HEADERS)
+        
+        # Filter by interviewer
+        feedback_entries = [f for f in feedback_entries if f.get('submitted_by') == interviewer_name]
+        
+        # Sort by submission date (newest first)
+        feedback_entries.sort(key=lambda x: x.get('submitted_at', ''), reverse=True)
+        
+        # Enhance feedback data with candidate and job role
+        interviews = read_csv(INTERVIEWS_FILE, INTERVIEW_HEADERS)
+        
+        enhanced_feedback = []
+        for feedback in feedback_entries:
+            interview = next((i for i in interviews if i['id'] == feedback['interview_id']), None)
+            if interview:
+                enhanced_entry = feedback.copy()
+                enhanced_entry['candidate_name'] = interview.get('candidate_name', '')
+                enhanced_entry['job_role'] = interview.get('job_role', '')
+                enhanced_entry['interview_date'] = interview.get('scheduled_at', '')
+                enhanced_feedback.append(enhanced_entry)
+        
+        return jsonify(enhanced_feedback)
+    
+    except Exception as e:
+        app.logger.error(f"Error in get_interviewer_feedback: {str(e)}")
+        return make_response(jsonify({"error": str(e)}), 500)
+
+# API Routes for Interviewee
+# GET /interviewee/interviews - Fetch interviews for a specific candidate
+@app.route('/interviewee/interviews', methods=['GET'])
+def get_interviewee_interviews():
+    try:
+        candidate_name = request.args.get('candidate_name', 'Sam Patel')  # Default for demo
+        
+        interviews = read_csv(INTERVIEWS_FILE, INTERVIEW_HEADERS)
+        
+        # Filter by candidate
+        interviews = [i for i in interviews if i.get('candidate_name') == candidate_name]
+        
+        # Sort by date
+        interviews.sort(key=lambda x: x.get('scheduled_at', ''))
+        
+        # Add feedback status info
+        feedback_entries = read_csv(FEEDBACK_FILE, FEEDBACK_HEADERS)
+        
+        for interview in interviews:
+            feedback = next((f for f in feedback_entries if f.get('interview_id') == interview['id']), None)
+            
+            if feedback and interview['status'] == 'Completed':
+                # For demo purposes, just mark as "Under Review"
+                # In a real app, we'd have a more complex feedback status system
+                interview['feedback_status'] = 'Under Review'
+            elif interview['status'] == 'Completed' and not feedback:
+                interview['feedback_status'] = 'Pending'
+        
+        return jsonify(interviews)
+    
+    except Exception as e:
+        app.logger.error(f"Error in get_interviewee_interviews: {str(e)}")
+        return make_response(jsonify({"error": str(e)}), 500)
+
+# GET /interviewee/interviews/<id>/join - Join an interview (update status to In Progress)
+@app.route('/interviewee/interviews/<id>/join', methods=['GET'])
+def join_interview(id):
+    try:
+        interviews = read_csv(INTERVIEWS_FILE, INTERVIEW_HEADERS)
+        
+        # Find the interview
+        interview = next((i for i in interviews if i['id'] == id), None)
+        
+        if not interview:
+            return make_response(jsonify({"error": "Interview not found"}), 404)
+        
+        # Check if interview is scheduled
+        if interview['status'] != 'Scheduled':
+            return make_response(jsonify({"error": "Interview is not in Scheduled status"}), 400)
+        
+        # Check if within time window (15 mins before to 1 hour after)
+        interview_time = datetime.fromisoformat(interview['scheduled_at'].replace('Z', '+00:00'))
+        now = datetime.now().replace(tzinfo=None)
+        time_diff = (interview_time.replace(tzinfo=None) - now).total_seconds() / 60
+        
+        if time_diff > 15:
+            return make_response(jsonify({"error": "Interview not ready yet, please join 15 minutes before the scheduled time"}), 403)
+        
+        if time_diff < -60:
+            return make_response(jsonify({"error": "Interview time has passed"}), 403)
+        
+        # Update status to In Progress
+        interview['status'] = 'In Progress'
+        write_csv(INTERVIEWS_FILE, interviews, INTERVIEW_HEADERS)
+        
+        # Return mock join URL
+        return jsonify({"join_url": f"https://video-call/{id}", "message": "Interview joined successfully"})
+    
+    except Exception as e:
+        app.logger.error(f"Error in join_interview: {str(e)}")
         return make_response(jsonify({"error": str(e)}), 500)
 
 # GET /statistics - Get statistics for dashboard
@@ -525,21 +735,54 @@ def add_sample_data():
         sample_interviews = [
             {
                 'id': '1',
-                'candidate_name': 'Jane Smith',
-                'interviewer_name': 'Michael Chen',
-                'scheduled_at': '2023-06-15T10:00:00Z',
-                'status': 'Completed',
-                'feedback_submitted': 'Yes',
+                'candidate_name': 'Sam Patel',
+                'interviewer_name': 'Isha Gupta',
+                'scheduled_at': '2025-03-15T10:00:00Z',
+                'status': 'Scheduled',
+                'feedback_submitted': 'No',
                 'job_role': 'Frontend Developer',
                 'format': 'technical',
                 'duration': '60'
             },
             {
                 'id': '2',
-                'candidate_name': 'John Doe',
-                'interviewer_name': 'Isha Patel',
-                'scheduled_at': '2023-06-20T14:30:00Z',
+                'candidate_name': 'Sam Patel',
+                'interviewer_name': 'Alex Johnson',
+                'scheduled_at': '2025-03-18T14:00:00Z',
                 'status': 'Scheduled',
+                'feedback_submitted': 'No',
+                'job_role': 'Frontend Developer',
+                'format': 'behavioral',
+                'duration': '45'
+            },
+            {
+                'id': '3',
+                'candidate_name': 'Sam Patel',
+                'interviewer_name': 'Michael Chen',
+                'scheduled_at': '2025-03-10T11:00:00Z',
+                'status': 'Completed',
+                'feedback_submitted': 'No',
+                'job_role': 'Frontend Developer',
+                'format': 'technical',
+                'duration': '60'
+            },
+            {
+                'id': '4',
+                'candidate_name': 'John Doe',
+                'interviewer_name': 'Isha Gupta',
+                'scheduled_at': '2025-03-16T14:00:00Z',
+                'status': 'Scheduled',
+                'feedback_submitted': 'No',
+                'job_role': 'Backend Developer',
+                'format': 'technical',
+                'duration': '60'
+            },
+            {
+                'id': '5',
+                'candidate_name': 'Maria Garcia',
+                'interviewer_name': 'Isha Gupta',
+                'scheduled_at': '2025-03-10T11:00:00Z',
+                'status': 'Completed',
                 'feedback_submitted': 'No',
                 'job_role': 'UX Designer',
                 'format': 'behavioral',
@@ -554,45 +797,38 @@ def add_sample_data():
         sample_users = [
             {
                 'id': '1',
+                'name': 'Isha Gupta',
+                'email': 'isha.gupta@example.com',
+                'role': 'Interviewer',
+                'status': 'Active',
+                'last_active': '2025-03-14T09:30:00Z'
+            },
+            {
+                'id': '2',
+                'name': 'Sam Patel',
+                'email': 'sam.patel@example.com',
+                'role': 'Candidate',
+                'status': 'Active',
+                'last_active': '2025-03-14T10:15:00Z'
+            },
+            {
+                'id': '3',
+                'name': 'Alex Johnson',
+                'email': 'alex.johnson@example.com',
+                'role': 'Interviewer',
+                'status': 'Active',
+                'last_active': '2025-03-14T11:45:00Z'
+            },
+            {
+                'id': '4',
                 'name': 'Michael Chen',
                 'email': 'michael.chen@example.com',
                 'role': 'Interviewer',
                 'status': 'Active',
-                'last_active': '2023-06-10T09:30:00Z'
-            },
-            {
-                'id': '2',
-                'name': 'Isha Patel',
-                'email': 'isha.patel@example.com',
-                'role': 'Interviewer',
-                'status': 'Active',
-                'last_active': '2023-06-12T11:45:00Z'
-            },
-            {
-                'id': '3',
-                'name': 'Alex Rivera',
-                'email': 'alex.rivera@example.com',
-                'role': 'Admin',
-                'status': 'Active',
-                'last_active': '2023-06-14T16:20:00Z'
+                'last_active': '2025-03-14T08:30:00Z'
             }
         ]
         write_csv(USERS_FILE, sample_users, USER_HEADERS)
-    
-    # Add sample feedback if none exists
-    feedback = read_csv(FEEDBACK_FILE, FEEDBACK_HEADERS)
-    if not feedback:
-        sample_feedback = [
-            {
-                'id': '1',
-                'interview_id': '1',
-                'rating': '4',
-                'comments': 'Strong technical skills, good cultural fit.',
-                'submitted_by': 'Michael Chen',
-                'submitted_at': '2023-06-15T11:30:00Z'
-            }
-        ]
-        write_csv(FEEDBACK_FILE, sample_feedback, FEEDBACK_HEADERS)
 
 if __name__ == '__main__':
     # Initialize CSV files before starting the server
