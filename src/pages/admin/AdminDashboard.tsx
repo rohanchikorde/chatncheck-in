@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Calendar, Clock, Download, FileText, MessageSquare, Plus, Users, Eye, PieChart, RefreshCw } from 'lucide-react';
+import { useState } from 'react';
+import { Calendar, Clock, Download, FileText, MessageSquare, Plus, Users, Eye, PieChart } from 'lucide-react';
 import { format } from 'date-fns';
 import PageHeader from '@/components/shared/PageHeader';
 import DashboardMetricCard from '@/components/shared/DashboardMetricCard';
@@ -14,21 +14,69 @@ import CreateInterviewModal from '@/components/admin/CreateInterviewModal';
 import ManageInterviewersModal from '@/components/admin/ManageInterviewersModal';
 import GenerateReportModal from '@/components/admin/GenerateReportModal';
 
-// API URL for interviews
-const API_URL = "http://localhost:5000/interviews";
-
-// Interface for interview data
-interface Interview {
-  id: string;
-  candidate_name: string;
-  interviewer_name: string;
-  scheduled_at: string;
-  status: string;
-  feedback_submitted: string;
-  job_role: string;
-  format?: string;
-  duration?: string;
-}
+// Mock data
+const mockInterviews: Omit<InterviewCardProps, 'viewerRole' | 'onView' | 'onJoin'>[] = [
+  {
+    id: '1',
+    title: 'Senior React Developer - First Round',
+    date: new Date(new Date().getTime() + 2 * 24 * 60 * 60 * 1000), // 2 days from now
+    duration: 60,
+    status: 'scheduled',
+    type: 'technical',
+    participants: [
+      { name: 'Isha Patel', role: 'interviewer', avatar: '' },
+      { name: 'Sam Johnson', role: 'interviewee', avatar: '' },
+    ],
+  },
+  {
+    id: '2',
+    title: 'UX Designer - Final Round',
+    date: new Date(new Date().getTime() + 5 * 24 * 60 * 60 * 1000), // 5 days from now
+    duration: 45,
+    status: 'scheduled',
+    type: 'behavioral',
+    participants: [
+      { name: 'Michael Chen', role: 'interviewer', avatar: '' },
+      { name: 'Emma Davis', role: 'interviewee', avatar: '' },
+    ],
+  },
+  {
+    id: '3',
+    title: 'Product Manager - Initial Screening',
+    date: new Date(new Date().getTime() - 1 * 24 * 60 * 60 * 1000), // 1 day ago
+    duration: 30,
+    status: 'completed',
+    type: 'mixed',
+    participants: [
+      { name: 'Alex Rivera', role: 'interviewer', avatar: '' },
+      { name: 'Jordan Smith', role: 'interviewee', avatar: '' },
+    ],
+  },
+  {
+    id: '4',
+    title: 'Frontend Developer - Technical Assessment',
+    date: new Date(new Date().getTime() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
+    duration: 60,
+    status: 'completed',
+    type: 'technical',
+    participants: [
+      { name: 'Isha Patel', role: 'interviewer', avatar: '' },
+      { name: 'Taylor Kim', role: 'interviewee', avatar: '' },
+    ],
+  },
+  {
+    id: '5',
+    title: 'DevOps Engineer - Cultural Fit',
+    date: new Date(new Date().getTime() + 3 * 24 * 60 * 60 * 1000), // 3 days from now
+    duration: 45,
+    status: 'scheduled',
+    type: 'behavioral',
+    participants: [
+      { name: 'Michael Chen', role: 'interviewer', avatar: '' },
+      { name: 'Riley Garcia', role: 'interviewee', avatar: '' },
+    ],
+  },
+];
 
 // Mock activity data
 const recentActivity = [
@@ -73,64 +121,6 @@ export default function AdminDashboard() {
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [interviewersModalOpen, setInterviewersModalOpen] = useState(false);
   const [reportModalOpen, setReportModalOpen] = useState(false);
-  const [interviews, setInterviews] = useState<Interview[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  // Fetch interviews from the server
-  useEffect(() => {
-    fetchInterviews();
-  }, []);
-
-  const fetchInterviews = async () => {
-    setLoading(true);
-    try {
-      console.log("Fetching interviews for dashboard from:", API_URL);
-      const response = await fetch(API_URL);
-      
-      if (!response.ok) {
-        throw new Error(`Server returned ${response.status}: ${response.statusText}`);
-      }
-      
-      const data = await response.json();
-      console.log("Fetched interviews for dashboard:", data);
-      setInterviews(data);
-    } catch (err) {
-      console.error("Error fetching interviews for dashboard:", err);
-      setError("Failed to connect to the interview server. Please ensure the server is running.");
-      toast({
-        title: "Connection Error",
-        description: "Failed to load interviews. Please check if the server is running.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Convert API interviews to InterviewCard format
-  const convertToInterviewCardProps = (interview: Interview): Omit<InterviewCardProps, 'viewerRole' | 'onView' | 'onJoin'> => {
-    return {
-      id: interview.id,
-      title: `${interview.job_role} - ${interview.format || 'Interview'}`,
-      date: new Date(interview.scheduled_at),
-      duration: interview.duration ? parseInt(interview.duration) : 60,
-      status: interview.status.toLowerCase() as 'scheduled' | 'completed' | 'cancelled',
-      type: interview.format?.toLowerCase() || 'technical',
-      participants: [
-        { 
-          name: interview.interviewer_name, 
-          role: 'interviewer', 
-          avatar: '' 
-        },
-        { 
-          name: interview.candidate_name, 
-          role: 'interviewee', 
-          avatar: '' 
-        },
-      ],
-    };
-  };
 
   const handleViewInterview = (id: string) => {
     navigate(`/admin/interviews/${id}`);
@@ -149,7 +139,6 @@ export default function AdminDashboard() {
   };
 
   const handleViewAllInterviews = () => {
-    console.log("Navigating to /admin/interviews");
     navigate('/admin/interviews');
   };
 
@@ -159,15 +148,6 @@ export default function AdminDashboard() {
 
   const handleGenerateReport = () => {
     setReportModalOpen(true);
-  };
-
-  const handleInterviewCreated = () => {
-    fetchInterviews();
-    setCreateModalOpen(false);
-    toast({
-      title: "Interview Created",
-      description: "The interview has been successfully scheduled.",
-    });
   };
 
   // Format the activity item based on type
@@ -255,10 +235,10 @@ export default function AdminDashboard() {
     }
   };
 
-  // Calculate stats from interview data
-  const totalScheduled = interviews.filter(i => i.status.toLowerCase() === 'scheduled').length;
-  const totalCompleted = interviews.filter(i => i.status.toLowerCase() === 'completed').length;
-  const pendingFeedback = interviews.filter(i => i.status.toLowerCase() === 'completed' && i.feedback_submitted === 'No').length;
+  // Calculate stats from mock data
+  const totalScheduled = mockInterviews.filter(i => i.status === 'scheduled').length;
+  const totalCompleted = mockInterviews.filter(i => i.status === 'completed').length;
+  const pendingFeedback = recentActivity.filter(a => a.type === 'feedback_overdue').length;
   const averageScore = 84; // Mock average score
 
   return (
@@ -279,19 +259,6 @@ export default function AdminDashboard() {
         </div>
       </PageHeader>
 
-      {/* Connection Error Alert */}
-      {error && (
-        <Alert variant="destructive">
-          <AlertDescription className="flex justify-between items-center">
-            <span>{error}</span>
-            <Button variant="outline" size="sm" onClick={fetchInterviews}>
-              <RefreshCw className="mr-1 h-3 w-3" />
-              Retry
-            </Button>
-          </AlertDescription>
-        </Alert>
-      )}
-
       {/* Overview Alerts */}
       <div className="space-y-4">
         {pendingFeedback > 0 && (
@@ -310,21 +277,21 @@ export default function AdminDashboard() {
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         <DashboardMetricCard
           title="Total Interviews"
-          value={interviews.length}
+          value={28}
           icon={<Calendar className="h-5 w-5" />}
-          description="All interviews"
+          description="This month"
           trend="up"
-          trendValue={`${interviews.length > 0 ? Math.floor((interviews.length / 10) * 100) : 0}%`}
+          trendValue="12%"
         />
         <DashboardMetricCard
-          title="Scheduled Interviews"
-          value={totalScheduled}
+          title="Active Interviewers"
+          value={8}
           icon={<Users className="h-5 w-5" />}
-          description="Upcoming interviews"
+          description="From 12 registered"
         />
         <DashboardMetricCard
           title="Pending Feedback"
-          value={pendingFeedback}
+          value={3}
           icon={<MessageSquare className="h-5 w-5" />}
           description="Awaiting review"
           trend="down"
@@ -394,36 +361,17 @@ export default function AdminDashboard() {
           </Button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {loading ? (
-            <div className="col-span-full p-8 text-center">Loading interviews...</div>
-          ) : error ? (
-            <div className="col-span-full p-8 text-center text-red-500">
-              {error}
-              <Button variant="link" onClick={fetchInterviews} className="ml-2">
-                Retry
-              </Button>
-            </div>
-          ) : interviews.length === 0 ? (
-            <div className="col-span-full p-8 text-center">
-              No interviews found. 
-              <Button variant="link" onClick={() => setCreateModalOpen(true)}>
-                Create your first interview
-              </Button>
-            </div>
-          ) : (
-            interviews
-              .filter((interview) => interview.status.toLowerCase() !== 'completed')
-              .slice(0, 3)
-              .map((interview) => (
-                <InterviewCard
-                  key={interview.id}
-                  {...convertToInterviewCardProps(interview)}
-                  viewerRole="admin"
-                  onView={() => handleViewInterview(interview.id)}
-                  onJoin={() => handleJoinInterview(interview.id)}
-                />
-              ))
-          )}
+          {mockInterviews
+            .filter((interview) => interview.status !== 'completed')
+            .map((interview) => (
+              <InterviewCard
+                key={interview.id}
+                {...interview}
+                viewerRole="admin"
+                onView={handleViewInterview}
+                onJoin={handleJoinInterview}
+              />
+            ))}
         </div>
       </div>
 
@@ -431,51 +379,30 @@ export default function AdminDashboard() {
       <div>
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-lg font-medium">Completed Interviews</h2>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={() => navigate('/admin/interviews?status=completed')}
-          >
+          <Button variant="ghost" size="sm" onClick={() => navigate('/admin/interviews?status=completed')}>
             View All
             <Clock className="ml-1 h-4 w-4" />
           </Button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {loading ? (
-            <div className="col-span-full p-8 text-center">Loading interviews...</div>
-          ) : error ? (
-            <div className="col-span-full p-8 text-center text-red-500">
-              {error}
-              <Button variant="link" onClick={fetchInterviews} className="ml-2">
-                Retry
-              </Button>
-            </div>
-          ) : interviews.filter(i => i.status.toLowerCase() === 'completed').length === 0 ? (
-            <div className="col-span-full p-8 text-center">
-              No completed interviews yet.
-            </div>
-          ) : (
-            interviews
-              .filter((interview) => interview.status.toLowerCase() === 'completed')
-              .slice(0, 3)
-              .map((interview) => (
-                <InterviewCard
-                  key={interview.id}
-                  {...convertToInterviewCardProps(interview)}
-                  viewerRole="admin"
-                  onView={() => handleViewInterview(interview.id)}
-                  onJoin={() => handleJoinInterview(interview.id)}
-                />
-              ))
-          )}
+          {mockInterviews
+            .filter((interview) => interview.status === 'completed')
+            .map((interview) => (
+              <InterviewCard
+                key={interview.id}
+                {...interview}
+                viewerRole="admin"
+                onView={handleViewInterview}
+                onJoin={handleJoinInterview}
+              />
+            ))}
         </div>
       </div>
 
       {/* Modals */}
       <CreateInterviewModal 
         isOpen={createModalOpen} 
-        onClose={() => setCreateModalOpen(false)}
-        onInterviewCreated={handleInterviewCreated}
+        onClose={() => setCreateModalOpen(false)} 
       />
       
       <ManageInterviewersModal 
