@@ -244,7 +244,7 @@ export default function UsersPage() {
                       <CardDescription className="text-xs">{user.email}</CardDescription>
                     </div>
                   </div>
-                  <Badge variant={user.status === "active" ? "success" : "secondary"}>
+                  <Badge variant={user.status === "active" ? "secondary" : "outline"} className={user.status === "active" ? "bg-green-100 text-green-800" : ""}>
                     {user.status === "active" ? "Active" : "Inactive"}
                   </Badge>
                 </div>
