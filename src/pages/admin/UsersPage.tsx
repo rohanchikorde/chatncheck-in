@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Search, Filter, X, Edit, Trash2, UserPlus } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,14 +19,14 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { ConfirmDeleteModal } from '@/components/admin/ConfirmDeleteModal';
 
-// Mock user data
+// Mock user data - in production, this would be fetched from the backend
 const mockUsers = [
   {
     id: "1",
@@ -80,14 +80,50 @@ const mockUsers = [
   }
 ];
 
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  department: string;
+  status: string;
+  interviews_conducted: number;
+  avatar: string;
+}
+
 export default function UsersPage() {
-  const [users, setUsers] = useState(mockUsers);
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
+  const [deleteUserId, setDeleteUserId] = useState<string | null>(null);
   const { toast } = useToast();
+
+  useEffect(() => {
+    // In a real app, fetch from API
+    const fetchUsers = async () => {
+      try {
+        // For demo, we'll use the mock data
+        // In production: const response = await fetch('/users');
+        // const data = await response.json();
+        setUsers(mockUsers);
+      } catch (error) {
+        console.error('Error fetching users:', error);
+        toast({
+          title: "Error",
+          description: "Failed to fetch users. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUsers();
+  }, [toast]);
 
   // Filter users based on search and filter criteria
   const filteredUsers = users.filter(user => {
@@ -102,12 +138,17 @@ export default function UsersPage() {
 
   // Function to delete a user
   const handleDeleteUser = (id: string) => {
-    if (window.confirm("Are you sure you want to delete this user?")) {
-      setUsers(users.filter(user => user.id !== id));
+    setDeleteUserId(id);
+  };
+
+  const confirmDeleteUser = () => {
+    if (deleteUserId) {
+      setUsers(users.filter(user => user.id !== deleteUserId));
       toast({
         title: "User Deleted",
         description: "The user has been successfully removed from the system.",
       });
+      setDeleteUserId(null);
     }
   };
 
@@ -142,6 +183,14 @@ export default function UsersPage() {
     setDepartmentFilter("");
     setStatusFilter("");
   };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="text-xl text-gray-500">Loading users...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -244,7 +293,7 @@ export default function UsersPage() {
                       <CardDescription className="text-xs">{user.email}</CardDescription>
                     </div>
                   </div>
-                  <Badge variant={user.status === "active" ? "secondary" : "outline"} className={user.status === "active" ? "bg-green-100 text-green-800" : ""}>
+                  <Badge variant={user.status === "active" ? "success" : "outline"}>
                     {user.status === "active" ? "Active" : "Inactive"}
                   </Badge>
                 </div>
@@ -339,6 +388,15 @@ export default function UsersPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Confirm Delete Modal */}
+      <ConfirmDeleteModal
+        isOpen={deleteUserId !== null}
+        onClose={() => setDeleteUserId(null)}
+        onConfirm={confirmDeleteUser}
+        title="Delete User"
+        description="Are you sure you want to delete this user? This action cannot be undone."
+      />
     </div>
   );
 }
