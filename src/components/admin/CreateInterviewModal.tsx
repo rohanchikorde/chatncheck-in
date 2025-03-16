@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -33,6 +33,7 @@ import { CalendarIcon, Upload } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import { createInterview, getInterviewers, getInterviewees, Interviewer, Interviewee } from "@/services/supabaseService";
 
 interface CreateInterviewModalProps {
   isOpen: boolean;
@@ -41,10 +42,10 @@ interface CreateInterviewModalProps {
 }
 
 const formSchema = z.object({
-  candidateName: z.string().min(2, {
-    message: "Candidate name must be at least 2 characters.",
+  intervieweeId: z.string({
+    required_error: "Please select a candidate.",
   }),
-  interviewer: z.string({
+  interviewerId: z.string({
     required_error: "Please select an interviewer.",
   }),
   date: z.date({
@@ -59,20 +60,11 @@ const formSchema = z.object({
   format: z.string({
     required_error: "Please select an interview format.",
   }),
-  jobRole: z.string().min(2, {
-    message: "Job role must be at least 2 characters.",
-  }),
-  useQuestionBank: z.boolean().default(false),
+  organizationId: z.string().default("00000000-0000-0000-0000-000000000000"), // Default organization for demo
+  notes: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
-
-// Mock interviewers data
-const interviewers = [
-  { id: "1", name: "Isha Patel", expertise: "Frontend Developer" },
-  { id: "2", name: "Michael Chen", expertise: "UX Designer" },
-  { id: "3", name: "Alex Rivera", expertise: "Product Manager" },
-];
 
 export default function CreateInterviewModal({
   isOpen,
@@ -80,15 +72,42 @@ export default function CreateInterviewModal({
   onInterviewCreated,
 }: CreateInterviewModalProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const [interviewers, setInterviewers] = useState<Interviewer[]>([]);
+  const [interviewees, setInterviewees] = useState<Interviewee[]>([]);
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  // Fetch interviewers and interviewees when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      const fetchData = async () => {
+        try {
+          const [interviewersData, intervieweesData] = await Promise.all([
+            getInterviewers(),
+            getInterviewees()
+          ]);
+          
+          setInterviewers(interviewersData || []);
+          setInterviewees(intervieweesData || []);
+        } catch (error) {
+          console.error("Error fetching data:", error);
+          toast({
+            title: "Error",
+            description: "Failed to load interviewers and candidates",
+            variant: "destructive",
+          });
+        }
+      };
+
+      fetchData();
+    }
+  }, [isOpen, toast]);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      candidateName: "",
-      jobRole: "",
-      useQuestionBank: false,
+      organizationId: "00000000-0000-0000-0000-000000000000", // Default organization for demo
+      notes: "",
     },
   });
 
@@ -105,39 +124,25 @@ export default function CreateInterviewModal({
       
       // Map form data to API format
       const interviewData = {
-        candidate_name: data.candidateName,
-        interviewer_name: interviewers.find(i => i.id === data.interviewer)?.name || "",
+        interviewer_id: data.interviewerId,
+        interviewee_id: data.intervieweeId,
+        organization_id: data.organizationId,
         scheduled_at: dateTimeString,
         status: "Scheduled",
-        job_role: data.jobRole,
-        feedback_submitted: "No",
-        format: data.format,
-        duration: data.duration
+        notes: data.notes,
+        feedback_submitted: "No"
       };
       
-      console.log("Sending interview data to backend:", interviewData);
+      console.log("Creating interview with data:", interviewData);
       
-      // Send data to backend API
-      const response = await fetch("http://localhost:5000/interviews", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(interviewData),
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to create interview");
-      }
-      
-      const responseData = await response.json();
-      console.log("Interview created successfully:", responseData);
+      // Create interview in Supabase
+      const newInterview = await createInterview(interviewData);
+      console.log("Interview created successfully:", newInterview);
       
       // Success notification
       toast({
         title: "Interview Scheduled",
-        description: `Interview for ${data.candidateName} has been created.`,
+        description: "The interview has been created successfully.",
       });
       
       // Reset form and close modal
@@ -156,7 +161,7 @@ export default function CreateInterviewModal({
       console.error("Error creating interview:", error);
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to create interview. Please try again.",
+        description: "Failed to create interview. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -196,13 +201,30 @@ export default function CreateInterviewModal({
         <form className="space-y-4">
           <FormField
             control={form.control}
-            name="candidateName"
+            name="intervieweeId"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Candidate Name</FormLabel>
-                <FormControl>
-                  <Input placeholder="John Doe" {...field} />
-                </FormControl>
+                <FormLabel>Candidate</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a candidate" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {interviewees.length > 0 ? (
+                      interviewees.map((interviewee) => (
+                        <SelectItem key={interviewee.id} value={interviewee.id || ""}>
+                          {interviewee.name} - {interviewee.role_applied || "Candidate"}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <SelectItem value="none" disabled>
+                        No candidates available. Add one first.
+                      </SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
                 <FormMessage />
               </FormItem>
             )}
@@ -210,7 +232,7 @@ export default function CreateInterviewModal({
 
           <FormField
             control={form.control}
-            name="interviewer"
+            name="interviewerId"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Interviewer</FormLabel>
@@ -223,13 +245,13 @@ export default function CreateInterviewModal({
                   <SelectContent>
                     {interviewers.length > 0 ? (
                       interviewers.map((interviewer) => (
-                        <SelectItem key={interviewer.id} value={interviewer.id}>
-                          {interviewer.name} ({interviewer.expertise})
+                        <SelectItem key={interviewer.id} value={interviewer.id || ""}>
+                          {interviewer.name} ({interviewer.specialization || "Interviewer"})
                         </SelectItem>
                       ))
                     ) : (
                       <SelectItem value="none" disabled>
-                        No interviewers available. Add one in Manage Interviewers.
+                        No interviewers available. Add one first.
                       </SelectItem>
                     )}
                   </SelectContent>
@@ -271,7 +293,7 @@ export default function CreateInterviewModal({
                         selected={field.value}
                         onSelect={field.onChange}
                         initialFocus
-                        className={cn("p-3 pointer-events-auto")}
+                        className="p-3"
                       />
                     </PopoverContent>
                   </Popover>
@@ -360,12 +382,12 @@ export default function CreateInterviewModal({
 
           <FormField
             control={form.control}
-            name="jobRole"
+            name="notes"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Job Role</FormLabel>
+                <FormLabel>Notes (Optional)</FormLabel>
                 <FormControl>
-                  <Input placeholder="Software Engineer" {...field} />
+                  <Input {...field} placeholder="Additional notes or instructions" />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -392,29 +414,6 @@ export default function CreateInterviewModal({
               </label>
             </div>
           </div>
-
-          <FormField
-            control={form.control}
-            name="useQuestionBank"
-            render={({ field }) => (
-              <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md p-4 border">
-                <FormControl>
-                  <input
-                    type="checkbox"
-                    checked={field.value}
-                    onChange={field.onChange}
-                    className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600 mt-1"
-                  />
-                </FormControl>
-                <div className="space-y-1 leading-none">
-                  <FormLabel>Use predefined question bank</FormLabel>
-                  <FormDescription>
-                    This will use questions from your organization's question bank
-                  </FormDescription>
-                </div>
-              </FormItem>
-            )}
-          />
         </form>
       </Form>
     </Modal>
