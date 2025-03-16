@@ -1,12 +1,12 @@
-// Keep the existing imports and add the seed data function
 import React, { useEffect } from "react";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Route, Routes, Outlet } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
 import Shell from "./components/layout/Shell";
 import InterviewerInterviewsPage from "./pages/interviewer/InterviewerInterviewsPage";
 import IntervieweeInterviewsPage from "./pages/interviewee/IntervieweeInterviewsPage";
 import InterviewsPage from "./pages/admin/InterviewsPage";
 import { seedSampleData } from "./utils/seedData"; // Add this import
+import LandingPage from "./pages/LandingPage";
 
 function App() {
   // Seed sample data when the app first loads
@@ -25,7 +25,8 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Shell />}>
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/" element={<Shell><Outlet /></Shell>}>
           <Route path="admin/interviews" element={<InterviewsPage />} />
           <Route path="interviewer/interviews" element={<InterviewerInterviewsPage />} />
           <Route path="interviewee/interviews" element={<IntervieweeInterviewsPage />} />

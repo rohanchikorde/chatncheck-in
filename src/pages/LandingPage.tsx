@@ -1,4 +1,3 @@
-
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -94,16 +93,19 @@ export default function LandingPage() {
       trigger: ".stats-section",
       start: "top 80%",
       onEnter: () => {
-        // Animate the stats values
-        gsap.to(setStatValues, {
+        // Animate the stats values - fix the reference to statValues object
+        // Create a temporary object for the animation
+        const animObj = { hireRate: 0, timeSaved: 0 };
+        
+        gsap.to(animObj, {
           hireRate: 35,
           timeSaved: 60,
           duration: 2,
           ease: "power2.out",
           onUpdate: () => {
             setStatValues({
-              hireRate: Math.round(setStatValues.hireRate),
-              timeSaved: Math.round(setStatValues.timeSaved)
+              hireRate: Math.round(animObj.hireRate),
+              timeSaved: Math.round(animObj.timeSaved)
             });
           }
         });
@@ -183,7 +185,7 @@ export default function LandingPage() {
             <Button 
               variant="ghost" 
               size="sm" 
-              onClick={() => navigate('/admin')}
+              onClick={() => navigate('/admin/interviews')}
               className="hidden sm:flex"
             >
               Demo
@@ -191,7 +193,7 @@ export default function LandingPage() {
             <Button 
               variant="ghost" 
               size="sm" 
-              onClick={() => navigate('/interviewer')}
+              onClick={() => navigate('/interviewer/interviews')}
               className="hidden sm:flex"
             >
               Interviewer
@@ -199,14 +201,14 @@ export default function LandingPage() {
             <Button 
               variant="ghost" 
               size="sm" 
-              onClick={() => navigate('/interviewee')}
+              onClick={() => navigate('/interviewee/interviews')}
               className="hidden sm:flex"
             >
               Interviewee
             </Button>
             <Button 
               ref={navButtonRef}
-              onClick={() => navigate('/admin')}
+              onClick={() => navigate('/admin/interviews')}
               className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700"
             >
               Get Started
@@ -240,12 +242,12 @@ export default function LandingPage() {
                 <div ref={heroCTARef} className="flex flex-col sm:flex-row gap-4 pt-4">
                   <Button 
                     size="lg" 
-                    onClick={() => navigate('/admin')}
+                    onClick={() => navigate('/admin/interviews')}
                     className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 transform transition-transform hover:scale-110"
                   >
                     Book a Demo <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
-                  <Button size="lg" variant="outline" onClick={() => navigate('/admin')}>
+                  <Button size="lg" variant="outline" onClick={() => navigate('/admin/interviews')}>
                     Explore Features
                   </Button>
                 </div>
@@ -573,7 +575,7 @@ export default function LandingPage() {
                 >
                   <Button 
                     size="lg" 
-                    onClick={() => navigate('/admin')}
+                    onClick={() => navigate('/admin/interviews')}
                     className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 transform transition-all duration-300 hover:scale-105 hover:shadow-lg"
                   >
                     Book a Demo Today
@@ -581,7 +583,7 @@ export default function LandingPage() {
                   <Button 
                     size="lg" 
                     variant="outline" 
-                    onClick={() => navigate('/admin')}
+                    onClick={() => navigate('/admin/interviews')}
                     className="transform transition-all duration-300 hover:scale-105"
                   >
                     Explore Features
@@ -647,50 +649,4 @@ export default function LandingPage() {
               <a href="#" className="text-muted-foreground hover:text-primary transition-colors">
                 <span className="sr-only">Twitter</span>
                 <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M8.29 20.251c7.547 0 11.675-6.253 11.675-11.675 0-.178 0-.355-.012-.53A8.348 8.348 0 0022 5.92a8.19 8.19 0 01-2.357.646 4.118 4.118 0 001.804-2.27 8.224 8.224 0 01-2.605.996 4.107 4.107 0 00-6.993 3.743 11.65 11.65 0 01-8.457-4.287 4.106 4.106 0 001.27 5.477A4.072 4.072 0 012.8 9.713v.052a4.105 4.105 0 003.292 4.022 4.095 4.095 0 01-1.853.07 4.108 4.108 0 003.834 2.85A8.233 8.233 0 012 18.407a11.616 11.616 0 006.29 1.84"></path>
-                </svg>
-              </a>
-              <a href="#" className="text-muted-foreground hover:text-primary transition-colors">
-                <span className="sr-only">LinkedIn</span>
-                <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                  <path fillRule="evenodd" d="M4.98 3.5c0 1.381-1.11 2.5-2.48 2.5s-2.48-1.119-2.48-2.5c0-1.38 1.11-2.5 2.48-2.5s2.48 1.12 2.48 2.5zm.02 4.5h-5v16h5v-16zm7.982 0h-4.968v16h4.969v-8.399c0-4.67 6.029-5.052 6.029 0v8.399h4.988v-10.131c0-7.88-8.922-7.593-11.018-3.714v-2.155z" clipRule="evenodd"></path>
-                </svg>
-              </a>
-            </div>
-          </div>
-        </div>
-      </footer>
-
-      {/* Add custom styles */}
-      <style jsx="true">{`
-        .process-icon {
-          animation: float 3s ease-in-out infinite;
-        }
-        
-        @keyframes float {
-          0% { transform: translateY(0px); }
-          50% { transform: translateY(-10px); }
-          100% { transform: translateY(0px); }
-        }
-
-        [data-aos="rotate-in"] {
-          transform: rotate(0deg);
-          opacity: 0;
-          transition-property: transform, opacity;
-        }
-        
-        [data-aos="rotate-in"].aos-animate {
-          transform: rotate(360deg);
-          opacity: 1;
-        }
-
-        .stat-value {
-          background: linear-gradient(90deg, #fff, #e0e7ff);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          position: relative;
-        }
-      `}</style>
-    </div>
-  );
-}
+                  <path d="M8.29 20.251c7.547 0 11.675-6.253 11.
