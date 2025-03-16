@@ -15,23 +15,16 @@ import {
 import PageHeader from "@/components/shared/PageHeader";
 import { useToast } from "@/hooks/use-toast";
 import CreateInterviewModal from "@/components/admin/CreateInterviewModal";
-import { supabase } from "@/integrations/supabase/client";
 
 // Interviews interface
 interface Interview {
   id: string;
-  interviewer: {
-    name: string;
-  };
-  interviewee: {
-    name: string;
-  };
+  candidate_name: string;
+  interviewer_name: string;
   scheduled_at: string;
   status: string;
   feedback_submitted: string;
-  interviewee_id: string;
-  interviewer_id: string;
-  job_role?: string;
+  job_role: string;
   format?: string;
   duration?: string;
 }
@@ -50,72 +43,28 @@ export default function InterviewsPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Function to fetch interviews with optional filters from Supabase
+  // Function to fetch interviews with optional filters
   const fetchInterviews = async () => {
     setLoading(true);
     setError(null);
     
+    // Build query parameters
+    const params = new URLSearchParams();
+    if (statusFilter) params.append("status", statusFilter);
+    if (interviewerFilter) params.append("interviewer_name", interviewerFilter);
+    if (searchQuery) params.append("search", searchQuery);
+    
     try {
-      let query = supabase
-        .from('interviews')
-        .select(`
-          id,
-          scheduled_at,
-          status,
-          feedback_submitted,
-          notes,
-          interviewer_id,
-          interviewee_id,
-          interviewer:interviewers(id, name),
-          interviewee:interviewees(id, name, role_applied)
-        `);
+      const response = await fetch(`http://localhost:5000/interviews?${params.toString()}`);
       
-      // Apply filters
-      if (statusFilter) {
-        query = query.eq('status', statusFilter);
+      if (!response.ok) {
+        throw new Error("Failed to fetch interviews");
       }
       
-      if (searchQuery) {
-        // Since we can't directly filter on joined tables with Supabase,
-        // we'll fetch all and filter client-side for search
-        // In a production app, you might want to implement a more efficient solution
-      }
-      
-      const { data, error } = await query;
-      
-      if (error) {
-        throw error;
-      }
-      
-      // Transform data to match our interface
-      const formattedData = data.map(interview => ({
-        ...interview,
-        id: interview.id,
-        job_role: interview.interviewee?.role_applied || 'Unknown',
-      }));
-      
-      // Client-side filtering for search query if needed
-      let filteredData = formattedData;
-      if (searchQuery && searchQuery.trim() !== '') {
-        const searchLower = searchQuery.toLowerCase();
-        filteredData = formattedData.filter(interview => 
-          interview.interviewee?.name?.toLowerCase().includes(searchLower) ||
-          interview.interviewer?.name?.toLowerCase().includes(searchLower) ||
-          (interview.job_role && interview.job_role.toLowerCase().includes(searchLower))
-        );
-      }
-      
-      // Client-side filtering for interviewer if needed
-      if (interviewerFilter && interviewerFilter.trim() !== '') {
-        filteredData = filteredData.filter(interview => 
-          interview.interviewer?.name === interviewerFilter
-        );
-      }
-      
-      setInterviews(filteredData);
-    } catch (err: any) {
-      console.error("Error loading interviews:", err);
-      setError(err.message || "Error loading interviews. Please try again.");
+      const data = await response.json();
+      setInterviews(data);
+    } catch (err) {
+      setError("Error loading interviews. Please try again.");
       toast({
         title: "Error",
         description: "Failed to load interviews",
@@ -147,13 +96,12 @@ export default function InterviewsPage() {
     }
     
     try {
-      const { error } = await supabase
-        .from('interviews')
-        .delete()
-        .eq('id', id);
-        
-      if (error) {
-        throw error;
+      const response = await fetch(`http://localhost:5000/interviews/${id}`, {
+        method: "DELETE",
+      });
+      
+      if (!response.ok) {
+        throw new Error("Failed to delete interview");
       }
       
       toast({
@@ -163,11 +111,10 @@ export default function InterviewsPage() {
       
       // Refresh interviews
       fetchInterviews();
-    } catch (error: any) {
-      console.error("Error deleting interview:", error);
+    } catch (error) {
       toast({
         title: "Error",
-        description: error.message || "Failed to delete the interview",
+        description: "Failed to delete the interview",
         variant: "destructive",
       });
     }
@@ -294,10 +241,10 @@ export default function InterviewsPage() {
                     key={interview.id} 
                     className="border-b hover:bg-muted/50 transition-colors"
                   >
-                    <td className="py-3 px-4">{interview.interviewee?.name || "Unknown"}</td>
-                    <td className="py-3 px-4">{interview.interviewer?.name || "Unknown"}</td>
+                    <td className="py-3 px-4">{interview.candidate_name}</td>
+                    <td className="py-3 px-4">{interview.interviewer_name}</td>
                     <td className="py-3 px-4">{formatDate(interview.scheduled_at)}</td>
-                    <td className="py-3 px-4">{interview.job_role || "Not specified"}</td>
+                    <td className="py-3 px-4">{interview.job_role}</td>
                     <td className="py-3 px-4">
                       <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
                         interview.status === "Completed" 

@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect } from "react";
 import { format, parseISO } from "date-fns";
-import { Calendar, Clock, User, Briefcase } from "lucide-react";
+import { Calendar, Clock, User, Briefcase, Filter, Search, X } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,18 +10,16 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import PageHeader from "@/components/shared/PageHeader";
 import RefreshButton from "@/components/shared/RefreshButton";
-import { Filter, Search, X } from "lucide-react";
 
 // Interview interface
 interface Interview {
   id: string;
-  interviewee: {
-    name: string;
-    role_applied: string;
-  };
+  candidate_name: string;
+  interviewer_name: string;
   scheduled_at: string;
   status: string;
   feedback_submitted: string;
+  job_role: string;
 }
 
 export default function InterviewerInterviewsPage() {
@@ -30,51 +29,24 @@ export default function InterviewerInterviewsPage() {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const { toast } = useToast();
 
-  // Fetch interviews function - updated to use Supabase
+  // Fetch interviews function
   const fetchInterviews = async () => {
     setLoading(true);
     try {
-      // Mock interviewer ID - in a real app, this would come from authentication
-      const interviewerId = "3d68b0e0-5837-40c3-aabc-8c79a0530fab"; // Replace with a valid ID from your database
-      
-      let query = supabase
-        .from('interviews')
-        .select(`
-          id,
-          scheduled_at,
-          status,
-          feedback_submitted,
-          interviewee:interviewees(name, role_applied)
-        `)
-        .eq('interviewer_id', interviewerId);
-      
-      if (statusFilter) {
-        query = query.eq('status', statusFilter);
+      // For now we're using a static API but will replace with Supabase later
+      const response = await fetch("http://localhost:5000/interviewer/interviews");
+      if (!response.ok) {
+        throw new Error("Failed to fetch interviews");
       }
       
-      const { data, error } = await query;
-      
-      if (error) {
-        throw error;
-      }
-      
-      // Filter by search query if needed (client-side)
-      let filteredData = data;
-      if (searchQuery && searchQuery.trim() !== '') {
-        const searchLower = searchQuery.toLowerCase();
-        filteredData = data.filter(interview => 
-          interview.interviewee?.name?.toLowerCase().includes(searchLower) ||
-          interview.interviewee?.role_applied?.toLowerCase().includes(searchLower)
-        );
-      }
-      
-      setInterviews(filteredData);
+      const data = await response.json();
+      setInterviews(data);
       
       toast({
         title: "Data refreshed",
         description: "Latest interviews have been loaded",
       });
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error fetching interviews:", error);
       toast({
         title: "Error",
@@ -89,7 +61,7 @@ export default function InterviewerInterviewsPage() {
   // Load interviews on component mount
   useEffect(() => {
     fetchInterviews();
-  }, [statusFilter, searchQuery]);
+  }, []);
 
   // Format date function
   const formatDate = (dateString: string) => {
@@ -101,7 +73,14 @@ export default function InterviewerInterviewsPage() {
   };
 
   // Filter interviews based on status and search query
-  const filteredInterviews = interviews;
+  const filteredInterviews = interviews.filter((interview) => {
+    const matchesStatus = statusFilter ? interview.status === statusFilter : true;
+    const matchesSearch = searchQuery
+      ? interview.candidate_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        interview.job_role.toLowerCase().includes(searchQuery.toLowerCase())
+      : true;
+    return matchesStatus && matchesSearch;
+  });
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -113,7 +92,7 @@ export default function InterviewerInterviewsPage() {
         }
       />
 
-      {/* Filters UI */}
+      {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-4 items-end animate-fade-in animation-delay-100">
         <div className="grid w-full sm:w-auto gap-1.5">
           <div className="relative">
@@ -213,10 +192,10 @@ export default function InterviewerInterviewsPage() {
               <CardContent className="p-6 space-y-4">
                 <div className="flex items-start justify-between">
                   <div>
-                    <h3 className="font-medium text-lg">{interview.interviewee?.name || "Unknown Candidate"}</h3>
+                    <h3 className="font-medium text-lg">{interview.candidate_name}</h3>
                     <div className="flex items-center text-muted-foreground text-sm mt-1">
                       <Briefcase className="h-3.5 w-3.5 mr-1" />
-                      {interview.interviewee?.role_applied || "No role specified"}
+                      {interview.job_role}
                     </div>
                   </div>
                   <div className="flex-shrink-0">
@@ -242,7 +221,7 @@ export default function InterviewerInterviewsPage() {
                   
                   <div className="flex items-center text-muted-foreground">
                     <User className="h-4 w-4 mr-2" />
-                    <span>Candidate: {interview.interviewee?.name || "Unknown"}</span>
+                    <span>Candidate: {interview.candidate_name}</span>
                   </div>
                 </div>
 

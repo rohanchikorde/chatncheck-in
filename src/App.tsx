@@ -1,52 +1,51 @@
 
-import React, { useEffect } from "react";
-import { BrowserRouter, Route, Routes, Outlet, Navigate } from "react-router-dom";
-import { Toaster } from "@/components/ui/toaster";
-import Shell from "./components/layout/Shell";
-import InterviewerInterviewsPage from "./pages/interviewer/InterviewerInterviewsPage";
-import IntervieweeInterviewsPage from "./pages/interviewee/IntervieweeInterviewsPage";
-import InterviewsPage from "./pages/admin/InterviewsPage";
-import { seedSampleData } from "./utils/seedData";
-import LandingPage from "./pages/LandingPage";
-import Index from "./pages/Index";
+import React from 'react';
+import { BrowserRouter, Routes, Route, Outlet } from 'react-router-dom';
+import LandingPage from './pages/LandingPage';
+import Shell from './components/layout/Shell';
+import AdminDashboard from './pages/admin/AdminDashboard';
+import InterviewsPage from './pages/admin/InterviewsPage';
+import InterviewDetailPage from './pages/admin/InterviewDetailPage';
+import UsersPage from './pages/admin/UsersPage';
+import InterviewerDashboard from './pages/interviewer/InterviewerDashboard';
+import InterviewerInterviewsPage from './pages/interviewer/InterviewerInterviewsPage';
+import InterviewerFeedbackPage from './pages/interviewer/InterviewerFeedbackPage';
+import IntervieweeInterviewsPage from './pages/interviewee/IntervieweeInterviewsPage';
+import IntervieweeDashboard from './pages/interviewee/IntervieweeDashboard';
+import NotFound from './pages/NotFound';
 
 function App() {
-  // Seed sample data when the app first loads
-  useEffect(() => {
-    const initializeData = async () => {
-      try {
-        await seedSampleData();
-      } catch (error) {
-        console.error("Error initializing data:", error);
-      }
-    };
-    
-    initializeData();
-  }, []);
-
   return (
     <BrowserRouter>
       <Routes>
-        {/* Public routes */}
         <Route path="/" element={<LandingPage />} />
-        <Route path="/index" element={<Index />} />
         
-        {/* App routes with Shell layout */}
-        <Route path="/" element={<Shell><Outlet /></Shell>}>
-          {/* Default route - redirect to index */}
-          <Route index element={<Navigate to="/index" replace />} />
-          
-          {/* Admin routes */}
-          <Route path="admin/interviews" element={<InterviewsPage />} />
-          
-          {/* Interviewer routes */}
-          <Route path="interviewer/interviews" element={<InterviewerInterviewsPage />} />
-          
-          {/* Interviewee routes */}
-          <Route path="interviewee/interviews" element={<IntervieweeInterviewsPage />} />
+        {/* Admin routes */}
+        <Route path="/admin" element={<Shell><Outlet /></Shell>}>
+          <Route index element={<AdminDashboard />} />
+          <Route path="dashboard" element={<AdminDashboard />} />
+          <Route path="interviews" element={<InterviewsPage />} />
+          <Route path="interviews/:id" element={<InterviewDetailPage />} />
+          <Route path="users" element={<UsersPage />} />
         </Route>
+
+        {/* Interviewer routes */}
+        <Route path="/interviewer" element={<Shell><Outlet /></Shell>}>
+          <Route index element={<InterviewerDashboard />} />
+          <Route path="dashboard" element={<InterviewerDashboard />} />
+          <Route path="interviews" element={<InterviewerInterviewsPage />} />
+          <Route path="feedback" element={<InterviewerFeedbackPage />} />
+        </Route>
+
+        {/* Interviewee routes */}
+        <Route path="/interviewee" element={<Shell><Outlet /></Shell>}>
+          <Route index element={<IntervieweeDashboard />} />
+          <Route path="dashboard" element={<IntervieweeDashboard />} />
+          <Route path="interviews" element={<IntervieweeInterviewsPage />} />
+        </Route>
+
+        <Route path="*" element={<NotFound />} />
       </Routes>
-      <Toaster />
     </BrowserRouter>
   );
 }
