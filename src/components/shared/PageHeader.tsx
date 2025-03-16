@@ -7,16 +7,21 @@ interface PageHeaderProps {
   description?: string;
   children?: ReactNode;
   className?: string;
+  actions?: ReactNode;
 }
 
-export default function PageHeader({ title, description, children, className }: PageHeaderProps) {
+export default function PageHeader({ title, description, children, className, actions }: PageHeaderProps) {
   return (
     <div className={cn("flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-6", className)}>
       <div className="space-y-1 animate-fade-in">
         <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
         {description && <p className="text-muted-foreground">{description}</p>}
       </div>
-      {children && <div className="flex-shrink-0 animate-fade-in animation-delay-100">{children}</div>}
+      {actions ? (
+        <div className="flex-shrink-0 animate-fade-in animation-delay-100">{actions}</div>
+      ) : children ? (
+        <div className="flex-shrink-0 animate-fade-in animation-delay-100">{children}</div>
+      ) : null}
     </div>
   );
 }
