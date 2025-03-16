@@ -1,301 +1,273 @@
 
-import React, { useState, useEffect } from "react";
-import { format, parseISO, isAfter, subMinutes } from "date-fns";
-import { Calendar, Clock, User, Briefcase, Filter, Search, X, Video } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import PageHeader from "@/components/shared/PageHeader";
-import RefreshButton from "@/components/shared/RefreshButton";
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { format } from 'date-fns';
+import { Calendar, Clock, RefreshCw, Video } from 'lucide-react';
+import PageHeader from '@/components/shared/PageHeader';
+import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/hooks/use-toast';
 
-// Interview interface
-interface Interview {
-  id: string;
-  interviewer_name: string;
-  scheduled_at: string;
-  status: string;
-  job_role: string;
-  feedback_submitted?: string;
-}
+// Mock data for interviewee interviews
+const mockInterviews = [
+  {
+    id: '1',
+    interviewer_name: 'Isha Gupta',
+    scheduled_at: '2025-03-15T10:00:00Z',
+    status: 'Scheduled',
+    job_role: 'Frontend Developer',
+  },
+  {
+    id: '2',
+    interviewer_name: 'Alex Johnson',
+    scheduled_at: '2025-03-18T14:00:00Z',
+    status: 'Scheduled',
+    job_role: 'Frontend Developer',
+  },
+  {
+    id: '3',
+    interviewer_name: 'Michael Chen',
+    scheduled_at: '2025-03-10T11:00:00Z',
+    status: 'Completed',
+    job_role: 'Frontend Developer',
+    feedback_status: 'Under Review'
+  }
+];
 
 export default function IntervieweeInterviewsPage() {
-  const [interviews, setInterviews] = useState<Interview[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState<string>("");
+  const navigate = useNavigate();
   const { toast } = useToast();
-  const [currentTime, setCurrentTime] = useState(new Date());
+  const [interviews, setInterviews] = useState(mockInterviews);
+  const [activeTab, setActiveTab] = useState<string>('upcoming');
 
-  // Update current time every minute
-  useEffect(() => {
-    const intervalId = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 60000);
-    
-    return () => clearInterval(intervalId);
-  }, []);
-
-  // Fetch interviews function
-  const fetchInterviews = async () => {
-    setLoading(true);
-    try {
-      // For now we're using a static API but will replace with Supabase later
-      const response = await fetch("http://localhost:5000/interviewee/interviews");
-      if (!response.ok) {
-        throw new Error("Failed to fetch interviews");
-      }
-      
-      const data = await response.json();
-      setInterviews(data);
-      
-      toast({
-        title: "Data refreshed",
-        description: "Latest interviews have been loaded",
-      });
-    } catch (error) {
-      console.error("Error fetching interviews:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load interviews. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
+  // Filter interviews based on active tab
+  const filteredInterviews = interviews.filter(interview => {
+    if (activeTab === 'upcoming') {
+      return interview.status === 'Scheduled';
+    } else if (activeTab === 'past') {
+      return interview.status === 'Completed' || interview.status === 'Cancelled';
     }
-  };
-
-  // Load interviews on component mount
-  useEffect(() => {
-    fetchInterviews();
-  }, []);
-
-  // Format date function
-  const formatDate = (dateString: string) => {
-    try {
-      return format(parseISO(dateString), "MMM d, yyyy h:mm a");
-    } catch (error) {
-      return "Invalid date";
-    }
-  };
-
-  // Check if interview can be joined (within 15 minutes of scheduled time)
-  const canJoinInterview = (scheduledAt: string) => {
-    try {
-      const interviewTime = parseISO(scheduledAt);
-      const fifteenMinutesBefore = subMinutes(interviewTime, 15);
-      return isAfter(currentTime, fifteenMinutesBefore) && !isAfter(currentTime, interviewTime);
-    } catch (error) {
-      return false;
-    }
-  };
-
-  // Join interview 
-  const joinInterview = (id: string) => {
-    toast({
-      title: "Joining interview",
-      description: "You will be redirected to the video call shortly.",
-    });
-    
-    // Mock API call to update status
-    fetch(`http://localhost:5000/interviewee/interviews/${id}/join`, {
-      method: "POST"
-    })
-    .then(response => {
-      if (!response.ok) throw new Error("Failed to join interview");
-      return response.json();
-    })
-    .then(data => {
-      // Redirect would happen here in a real implementation
-      console.log("Join URL:", data.join_url);
-      window.open(data.join_url, "_blank");
-      
-      // Refresh the interviews to show updated status
-      fetchInterviews();
-    })
-    .catch(error => {
-      toast({
-        title: "Error",
-        description: "Failed to join the interview. Please try again.",
-        variant: "destructive",
-      });
-    });
-  };
-
-  // Filter interviews based on status
-  const filteredInterviews = interviews.filter((interview) => {
-    return statusFilter ? interview.status === statusFilter : true;
+    return true;
   });
 
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'Scheduled':
+        return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">Scheduled</Badge>;
+      case 'In Progress':
+        return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">In Progress</Badge>;
+      case 'Completed':
+        return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Completed</Badge>;
+      case 'Cancelled':
+        return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">Cancelled</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
+    }
+  };
+
+  const getFeedbackBadge = (status: string) => {
+    switch (status) {
+      case 'Under Review':
+        return <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">Under Review</Badge>;
+      case 'Available':
+        return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Feedback Available</Badge>;
+      default:
+        return null;
+    }
+  };
+
+  const handleJoinInterview = (id: string) => {
+    // Update status to "In Progress" when joining
+    setInterviews(prevInterviews => 
+      prevInterviews.map(interview => 
+        interview.id === id 
+          ? { ...interview, status: 'In Progress' } 
+          : interview
+      )
+    );
+    
+    toast({
+      title: "Interview Room",
+      description: "You're joining as a candidate. Good luck!",
+    });
+    
+    // In a real app, this would navigate to a video call page
+    window.open(`/interview-room/${id}`, '_blank');
+  };
+
+  // Check if interview is ready to join (within 15 minutes of scheduled time)
+  const isInterviewReady = (scheduledAt: string) => {
+    const now = new Date();
+    const interviewTime = new Date(scheduledAt);
+    const timeDiff = (interviewTime.getTime() - now.getTime()) / (1000 * 60); // diff in minutes
+    
+    return timeDiff <= 15 && timeDiff >= -60; // can join 15min before until 60min after start time
+  };
+
   return (
-    <div className="space-y-6 animate-fade-in">
-      <PageHeader
-        title="My Interviews"
-        description="View your upcoming and past interviews"
+    <div className="space-y-6">
+      <PageHeader 
+        title="My Interviews" 
+        description="View your scheduled and past interviews"
         actions={
-          <RefreshButton onRefresh={fetchInterviews} />
+          <Button variant="outline" onClick={() => toast({ description: "Refreshed interviews" })}>
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Refresh
+          </Button>
         }
       />
 
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-4 items-end animate-fade-in animation-delay-100">
-        <div className="grid w-full sm:w-auto gap-1.5">
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-full sm:w-[180px]">
-              <SelectValue placeholder="Filter by status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">All Statuses</SelectItem>
-              <SelectItem value="Scheduled">Scheduled</SelectItem>
-              <SelectItem value="In Progress">In Progress</SelectItem>
-              <SelectItem value="Completed">Completed</SelectItem>
-              <SelectItem value="Under Review">Under Review</SelectItem>
-              <SelectItem value="Cancelled">Cancelled</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+      {/* Interview Preparation Resources */}
+      {activeTab === 'upcoming' && filteredInterviews.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg">Prepare for Your Interview</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-muted-foreground">
+              Here are some resources to help you prepare for your upcoming interviews.
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Card className="bg-muted/50">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm">Technical Preparation</CardTitle>
+                </CardHeader>
+                <CardContent className="text-sm">
+                  <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                    <li>Review core frontend concepts</li>
+                    <li>Practice coding problems</li>
+                    <li>Prepare for system design questions</li>
+                  </ul>
+                </CardContent>
+              </Card>
+              <Card className="bg-muted/50">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm">Behavioral Preparation</CardTitle>
+                </CardHeader>
+                <CardContent className="text-sm">
+                  <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                    <li>Prepare STAR method responses</li>
+                    <li>Research the company culture</li>
+                    <li>Prepare questions for the interviewer</li>
+                  </ul>
+                </CardContent>
+              </Card>
+              <Card className="bg-muted/50">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm">Technical Setup</CardTitle>
+                </CardHeader>
+                <CardContent className="text-sm">
+                  <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                    <li>Test your microphone and camera</li>
+                    <li>Ensure stable internet connection</li>
+                    <li>Prepare a quiet environment</li>
+                  </ul>
+                </CardContent>
+              </Card>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
-        {statusFilter && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              setStatusFilter("");
-            }}
-            className="animate-fade-in"
-          >
-            <X className="h-4 w-4 mr-1" />
-            Clear Filter
-          </Button>
-        )}
+      {/* Interview Tabs */}
+      <div className="flex border-b">
+        <Button
+          variant="link"
+          className={`pb-2 px-4 ${activeTab === 'upcoming' ? 'border-b-2 border-primary text-primary font-medium' : 'text-muted-foreground'}`}
+          onClick={() => setActiveTab('upcoming')}
+        >
+          Upcoming
+        </Button>
+        <Button
+          variant="link"
+          className={`pb-2 px-4 ${activeTab === 'past' ? 'border-b-2 border-primary text-primary font-medium' : 'text-muted-foreground'}`}
+          onClick={() => setActiveTab('past')}
+        >
+          Past Interviews
+        </Button>
       </div>
 
-      {/* Interviews List */}
-      {loading ? (
-        <div className="space-y-4 animate-pulse">
-          {[1, 2, 3].map((i) => (
-            <Card key={i} className="border shadow-sm">
-              <CardContent className="p-6">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-                  <div className="space-y-3 mb-4 sm:mb-0">
-                    <div className="h-6 bg-gray-200 rounded w-48"></div>
-                    <div className="h-4 bg-gray-200 rounded w-32"></div>
-                    <div className="h-4 bg-gray-200 rounded w-40"></div>
-                  </div>
-                  <div className="h-9 bg-gray-200 rounded w-28"></div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      ) : filteredInterviews.length === 0 ? (
-        <div className="text-center p-10 animate-fade-in animation-delay-200">
-          <div className="w-16 h-16 mx-auto mb-4 bg-muted rounded-full flex items-center justify-center">
-            <Calendar className="h-8 w-8 text-muted-foreground" />
-          </div>
-          <h3 className="font-medium text-lg mb-2">No interviews found</h3>
-          <p className="text-muted-foreground mb-4">
-            {statusFilter
-              ? "Try changing your filter to see more results."
-              : "You don't have any interviews scheduled yet."}
-          </p>
-          {statusFilter && (
-            <Button
-              variant="outline"
-              onClick={() => {
-                setStatusFilter("");
-              }}
-            >
-              Clear Filter
-            </Button>
-          )}
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {filteredInterviews.map((interview, index) => (
-            <Card
-              key={interview.id}
-              className="border shadow-sm transition-all duration-300 hover:shadow-md hover:border-primary/20"
-              data-aos="fade-up"
-              data-aos-delay={index * 100}
-            >
-              <CardContent className="p-6">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between sm:justify-start">
-                      <h3 className="font-medium text-lg">{interview.job_role}</h3>
-                      <span
-                        className={`ml-3 inline-block px-2 py-1 rounded-full text-xs font-medium ${
-                          interview.status === "Completed" || interview.status === "Under Review"
-                            ? "bg-green-100 text-green-800"
-                            : interview.status === "Cancelled"
-                            ? "bg-red-100 text-red-800"
-                            : interview.status === "In Progress"
-                            ? "bg-amber-100 text-amber-800"
-                            : "bg-blue-100 text-blue-800"
-                        }`}
+      {/* Interviews Table */}
+      <Card>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Interviewer</TableHead>
+              <TableHead>Date & Time</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Job Role</TableHead>
+              <TableHead>Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredInterviews.length > 0 ? (
+              filteredInterviews.map((interview) => (
+                <TableRow key={interview.id}>
+                  <TableCell className="font-medium">{interview.interviewer_name}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center">
+                      <Calendar className="mr-2 h-4 w-4 text-muted-foreground" />
+                      {format(new Date(interview.scheduled_at), 'MMM d, yyyy')}
+                      <Clock className="ml-3 mr-2 h-4 w-4 text-muted-foreground" />
+                      {format(new Date(interview.scheduled_at), 'h:mm a')}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex flex-col gap-1">
+                      {getStatusBadge(interview.status)}
+                      {interview.feedback_status && getFeedbackBadge(interview.feedback_status)}
+                    </div>
+                  </TableCell>
+                  <TableCell>{interview.job_role}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => navigate(`/interviewee/interviews/${interview.id}`)}
                       >
-                        {interview.status}
-                      </span>
-                    </div>
-                    
-                    <div className="flex items-center text-muted-foreground">
-                      <User className="h-4 w-4 mr-2" />
-                      <span>Interviewer: {interview.interviewer_name}</span>
-                    </div>
-                    
-                    <div className="flex items-center text-muted-foreground">
-                      <Clock className="h-4 w-4 mr-2" />
-                      <span>{formatDate(interview.scheduled_at)}</span>
-                    </div>
-                    
-                    {interview.feedback_submitted === "Yes" && (
-                      <div className="text-green-600 text-sm font-medium">
-                        Feedback has been submitted
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div className="flex-shrink-0 self-end sm:self-center">
-                    {interview.status === "Scheduled" ? (
-                      canJoinInterview(interview.scheduled_at) ? (
-                        <Button
-                          className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 group relative overflow-hidden"
-                          onClick={() => joinInterview(interview.id)}
+                        Details
+                      </Button>
+                      
+                      {interview.status === 'Scheduled' && (
+                        <Button 
+                          variant="default" 
+                          size="sm"
+                          disabled={!isInterviewReady(interview.scheduled_at)}
+                          onClick={() => handleJoinInterview(interview.id)}
                         >
-                          <span className="relative z-10 flex items-center">
-                            <Video className="h-4 w-4 mr-2" />
-                            Join Video
-                          </span>
-                          <span className="absolute inset-0 bg-white opacity-0 group-hover:opacity-20 transition-opacity duration-300"></span>
+                          <Video className="mr-2 h-4 w-4" />
+                          Join
                         </Button>
-                      ) : (
-                        <Button variant="outline" disabled={true} className="opacity-70">
-                          <Clock className="h-4 w-4 mr-2" />
-                          Not Yet Available
+                      )}
+                      
+                      {interview.feedback_status === 'Available' && (
+                        <Button 
+                          variant="success" 
+                          size="sm"
+                          onClick={() => navigate(`/interviewee/feedback/${interview.id}`)}
+                        >
+                          View Feedback
                         </Button>
-                      )
-                    ) : interview.status === "Completed" || interview.status === "Under Review" ? (
-                      <Button variant="outline">
-                        View Feedback
-                      </Button>
-                    ) : interview.status === "In Progress" ? (
-                      <Button
-                        className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 animate-pulse"
-                        onClick={() => joinInterview(interview.id)}
-                      >
-                        <Video className="h-4 w-4 mr-2" />
-                        Rejoin
-                      </Button>
-                    ) : null}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center py-6 text-muted-foreground">
+                  {activeTab === 'upcoming' 
+                    ? "No upcoming interviews scheduled. Check back later." 
+                    : "No past interviews found."}
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </Card>
     </div>
   );
 }

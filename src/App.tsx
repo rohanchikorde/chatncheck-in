@@ -2,7 +2,6 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Outlet } from 'react-router-dom';
 import LandingPage from './pages/LandingPage';
-import Index from './pages/Index';
 import Shell from './components/layout/Shell';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import InterviewsPage from './pages/admin/InterviewsPage';
@@ -20,7 +19,6 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<LandingPage />} />
-        <Route path="/index" element={<Index />} />
         
         {/* Admin routes */}
         <Route path="/admin" element={<Shell><Outlet /></Shell>}>

@@ -1,255 +1,203 @@
 
-import React, { useState, useEffect } from "react";
-import { format, parseISO } from "date-fns";
-import { Calendar, Clock, User, Briefcase, Filter, Search, X } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import PageHeader from "@/components/shared/PageHeader";
-import RefreshButton from "@/components/shared/RefreshButton";
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { format } from 'date-fns';
+import { Calendar, Filter, RefreshCw } from 'lucide-react';
+import PageHeader from '@/components/shared/PageHeader';
+import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/hooks/use-toast';
+import InterviewerFeedbackModal from '@/components/interviewer/InterviewerFeedbackModal';
 
-// Interview interface
-interface Interview {
-  id: string;
-  candidate_name: string;
-  interviewer_name: string;
-  scheduled_at: string;
-  status: string;
-  feedback_submitted: string;
-  job_role: string;
-}
+// Mock data for now - would be replaced with API calls
+const mockInterviews = [
+  {
+    id: '1',
+    candidate_name: 'Sam Patel',
+    scheduled_at: '2025-03-15T10:00:00Z',
+    status: 'Scheduled',
+    job_role: 'Frontend Developer',
+    feedback_submitted: 'No'
+  },
+  {
+    id: '2',
+    candidate_name: 'John Doe',
+    scheduled_at: '2025-03-16T14:00:00Z',
+    status: 'Scheduled',
+    job_role: 'Backend Developer',
+    feedback_submitted: 'No'
+  },
+  {
+    id: '3',
+    candidate_name: 'Maria Garcia',
+    scheduled_at: '2025-03-10T11:00:00Z',
+    status: 'Completed',
+    job_role: 'UX Designer',
+    feedback_submitted: 'No'
+  }
+];
 
 export default function InterviewerInterviewsPage() {
-  const [interviews, setInterviews] = useState<Interview[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState<string>("");
-  const [searchQuery, setSearchQuery] = useState<string>("");
+  const navigate = useNavigate();
   const { toast } = useToast();
+  const [selectedInterview, setSelectedInterview] = useState<string | null>(null);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [interviews, setInterviews] = useState(mockInterviews);
+  const [statusFilter, setStatusFilter] = useState<string>('All');
 
-  // Fetch interviews function
-  const fetchInterviews = async () => {
-    setLoading(true);
-    try {
-      // For now we're using a static API but will replace with Supabase later
-      const response = await fetch("http://localhost:5000/interviewer/interviews");
-      if (!response.ok) {
-        throw new Error("Failed to fetch interviews");
-      }
-      
-      const data = await response.json();
-      setInterviews(data);
-      
-      toast({
-        title: "Data refreshed",
-        description: "Latest interviews have been loaded",
-      });
-    } catch (error) {
-      console.error("Error fetching interviews:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load interviews. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
+  const filteredInterviews = statusFilter === 'All' 
+    ? interviews 
+    : interviews.filter(interview => interview.status === statusFilter);
+
+  const handleSubmitFeedback = (interviewId: string, feedback: any) => {
+    console.log('Submitting feedback for interview', interviewId, feedback);
+    
+    // Update the local state (would be an API call in production)
+    setInterviews(prevInterviews => 
+      prevInterviews.map(interview => 
+        interview.id === interviewId 
+          ? { ...interview, feedback_submitted: 'Yes' } 
+          : interview
+      )
+    );
+    
+    setShowFeedbackModal(false);
+    
+    toast({
+      title: "Feedback submitted",
+      description: "Your feedback has been recorded successfully.",
+    });
   };
 
-  // Load interviews on component mount
-  useEffect(() => {
-    fetchInterviews();
-  }, []);
-
-  // Format date function
-  const formatDate = (dateString: string) => {
-    try {
-      return format(parseISO(dateString), "MMM d, yyyy h:mm a");
-    } catch (error) {
-      return "Invalid date";
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'Scheduled':
+        return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">Scheduled</Badge>;
+      case 'In Progress':
+        return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">In Progress</Badge>;
+      case 'Completed':
+        return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Completed</Badge>;
+      case 'Cancelled':
+        return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">Cancelled</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
     }
   };
-
-  // Filter interviews based on status and search query
-  const filteredInterviews = interviews.filter((interview) => {
-    const matchesStatus = statusFilter ? interview.status === statusFilter : true;
-    const matchesSearch = searchQuery
-      ? interview.candidate_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        interview.job_role.toLowerCase().includes(searchQuery.toLowerCase())
-      : true;
-    return matchesStatus && matchesSearch;
-  });
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <PageHeader
-        title="My Interviews"
-        description="View and manage your upcoming interviews"
+    <div className="space-y-6">
+      <PageHeader 
+        title="My Interviews" 
+        description="Manage your assigned interviews and submit feedback"
         actions={
-          <RefreshButton onRefresh={fetchInterviews} />
+          <Button variant="outline" onClick={() => toast({ description: "Refreshed interviews" })}>
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Refresh
+          </Button>
         }
       />
 
       {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-4 items-end animate-fade-in animation-delay-100">
-        <div className="grid w-full sm:w-auto gap-1.5">
-          <div className="relative">
-            <Input
-              placeholder="Search by candidate or job role..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full sm:w-[300px] pl-10"
-            />
-            <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-              <Search className="h-4 w-4 opacity-50" />
-            </div>
+      <Card className="p-4">
+        <div className="flex flex-wrap gap-4 items-center">
+          <div className="flex items-center">
+            <Filter className="mr-2 h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-medium">Filter by:</span>
+          </div>
+          
+          <div className="flex flex-wrap gap-2">
+            {['All', 'Scheduled', 'In Progress', 'Completed'].map(status => (
+              <Button 
+                key={status}
+                variant={statusFilter === status ? "default" : "outline"}
+                size="sm"
+                onClick={() => setStatusFilter(status)}
+              >
+                {status}
+              </Button>
+            ))}
           </div>
         </div>
+      </Card>
 
-        <div className="grid w-full sm:w-auto gap-1.5">
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-full sm:w-[180px]">
-              <SelectValue placeholder="Filter by status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">All Statuses</SelectItem>
-              <SelectItem value="Scheduled">Scheduled</SelectItem>
-              <SelectItem value="Completed">Completed</SelectItem>
-              <SelectItem value="Cancelled">Cancelled</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        {(statusFilter || searchQuery) && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              setStatusFilter("");
-              setSearchQuery("");
-            }}
-            className="animate-fade-in"
-          >
-            <X className="h-4 w-4 mr-1" />
-            Clear Filters
-          </Button>
-        )}
-      </div>
-
-      {/* Interviews Grid */}
-      {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 animate-pulse">
-          {[1, 2, 3].map((i) => (
-            <Card key={i} className="border shadow-sm">
-              <CardContent className="p-6 space-y-4">
-                <div className="h-6 bg-gray-200 rounded w-3/4"></div>
-                <div className="space-y-2">
-                  <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-                  <div className="h-4 bg-gray-200 rounded w-2/3"></div>
-                  <div className="h-4 bg-gray-200 rounded w-1/3"></div>
-                </div>
-                <div className="flex justify-end">
-                  <div className="h-9 bg-gray-200 rounded w-24"></div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      ) : filteredInterviews.length === 0 ? (
-        <div className="text-center p-10 animate-fade-in animation-delay-200">
-          <div className="w-16 h-16 mx-auto mb-4 bg-muted rounded-full flex items-center justify-center">
-            <Calendar className="h-8 w-8 text-muted-foreground" />
-          </div>
-          <h3 className="font-medium text-lg mb-2">No interviews found</h3>
-          <p className="text-muted-foreground mb-4">
-            {statusFilter || searchQuery
-              ? "Try changing your filters to see more results."
-              : "You don't have any interviews scheduled yet."}
-          </p>
-          {(statusFilter || searchQuery) && (
-            <Button
-              variant="outline"
-              onClick={() => {
-                setStatusFilter("");
-                setSearchQuery("");
-              }}
-            >
-              Clear Filters
-            </Button>
-          )}
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredInterviews.map((interview, index) => (
-            <Card
-              key={interview.id}
-              className="border shadow-sm transition-all duration-300 hover:shadow-md hover:border-primary/20 hover:translate-y-[-2px]"
-              data-aos="fade-up"
-              data-aos-delay={index * 100}
-            >
-              <CardContent className="p-6 space-y-4">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h3 className="font-medium text-lg">{interview.candidate_name}</h3>
-                    <div className="flex items-center text-muted-foreground text-sm mt-1">
-                      <Briefcase className="h-3.5 w-3.5 mr-1" />
-                      {interview.job_role}
+      {/* Interviews Table */}
+      <Card>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Candidate</TableHead>
+              <TableHead>Date</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Job Role</TableHead>
+              <TableHead>Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredInterviews.length > 0 ? (
+              filteredInterviews.map((interview) => (
+                <TableRow key={interview.id}>
+                  <TableCell className="font-medium">{interview.candidate_name}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center">
+                      <Calendar className="mr-2 h-4 w-4 text-muted-foreground" />
+                      {format(new Date(interview.scheduled_at), 'MMM d, yyyy h:mm a')}
                     </div>
-                  </div>
-                  <div className="flex-shrink-0">
-                    <span
-                      className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
-                        interview.status === "Completed"
-                          ? "bg-green-100 text-green-800"
-                          : interview.status === "Cancelled"
-                          ? "bg-red-100 text-red-800"
-                          : "bg-blue-100 text-blue-800"
-                      }`}
-                    >
-                      {interview.status}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center text-muted-foreground">
-                    <Clock className="h-4 w-4 mr-2" />
-                    <span>{formatDate(interview.scheduled_at)}</span>
-                  </div>
-                  
-                  <div className="flex items-center text-muted-foreground">
-                    <User className="h-4 w-4 mr-2" />
-                    <span>Candidate: {interview.candidate_name}</span>
-                  </div>
-                </div>
-
-                <div className="flex justify-end pt-2">
-                  {interview.status === "Completed" ? (
-                    interview.feedback_submitted === "Yes" ? (
-                      <span className="text-green-600 font-medium text-sm">Feedback Submitted</span>
-                    ) : (
-                      <Button
-                        variant="default"
-                        className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 transition-all duration-300 animate-pulse"
+                  </TableCell>
+                  <TableCell>{getStatusBadge(interview.status)}</TableCell>
+                  <TableCell>{interview.job_role}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => navigate(`/interviewer/interviews/${interview.id}`)}
                       >
-                        Submit Feedback
+                        View Details
                       </Button>
-                    )
-                  ) : (
-                    <Button
-                      variant="outline"
-                      className="transition-all duration-300 hover:border-primary"
-                    >
-                      View Details
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                      
+                      {interview.status === 'Completed' && interview.feedback_submitted === 'No' && (
+                        <Button 
+                          variant="default" 
+                          size="sm"
+                          onClick={() => {
+                            setSelectedInterview(interview.id);
+                            setShowFeedbackModal(true);
+                          }}
+                        >
+                          Submit Feedback
+                        </Button>
+                      )}
+                      
+                      {interview.feedback_submitted === 'Yes' && (
+                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                          Feedback Submitted
+                        </Badge>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center py-6 text-muted-foreground">
+                  No interviews found. Adjust filters or check back later.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </Card>
+
+      {/* Feedback Modal */}
+      {showFeedbackModal && selectedInterview && (
+        <InterviewerFeedbackModal
+          isOpen={showFeedbackModal}
+          onClose={() => setShowFeedbackModal(false)}
+          onSubmit={(feedback) => handleSubmitFeedback(selectedInterview, feedback)}
+          interviewId={selectedInterview}
+        />
       )}
     </div>
   );
