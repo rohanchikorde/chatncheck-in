@@ -258,7 +258,7 @@ export default function IntervieweeInterviewsPage() {
                   </div>
                   
                   <div className="flex-shrink-0 self-end sm:self-center">
-                    {interview.status === "Scheduled" && (
+                    {interview.status === "Scheduled" ? (
                       canJoinInterview(interview.scheduled_at) ? (
                         <Button
                           className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 group relative overflow-hidden"
