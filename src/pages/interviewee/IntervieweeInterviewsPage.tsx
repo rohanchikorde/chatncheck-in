@@ -14,11 +14,14 @@ import RefreshButton from "@/components/shared/RefreshButton";
 // Interview interface
 interface Interview {
   id: string;
-  interviewer_name: string;
+  interviewer: {
+    name: string;
+  };
   scheduled_at: string;
   status: string;
-  job_role: string;
+  job_role?: string;
   feedback_submitted?: string;
+  interviewee_id: string;
 }
 
 export default function IntervieweeInterviewsPage() {
@@ -37,24 +40,42 @@ export default function IntervieweeInterviewsPage() {
     return () => clearInterval(intervalId);
   }, []);
 
-  // Fetch interviews function
+  // Fetch interviews function - updated to use Supabase
   const fetchInterviews = async () => {
     setLoading(true);
     try {
-      // For now we're using a static API but will replace with Supabase later
-      const response = await fetch("http://localhost:5000/interviewee/interviews");
-      if (!response.ok) {
-        throw new Error("Failed to fetch interviews");
+      // Mock interviewee ID - in a real app, this would come from authentication
+      const intervieweeId = "7f9e3c5a-4d2b-4b7f-8a6e-0c9d1f2e3b5a"; // Replace with a valid ID from your database
+      
+      let query = supabase
+        .from('interviews')
+        .select(`
+          id,
+          scheduled_at,
+          status,
+          feedback_submitted,
+          interviewee_id,
+          interviewer:interviewers(id, name)
+        `)
+        .eq('interviewee_id', intervieweeId);
+      
+      if (statusFilter) {
+        query = query.eq('status', statusFilter);
       }
       
-      const data = await response.json();
-      setInterviews(data);
+      const { data, error } = await query;
+      
+      if (error) {
+        throw error;
+      }
+      
+      setInterviews(data || []);
       
       toast({
         title: "Data refreshed",
         description: "Latest interviews have been loaded",
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching interviews:", error);
       toast({
         title: "Error",
@@ -69,7 +90,7 @@ export default function IntervieweeInterviewsPage() {
   // Load interviews on component mount
   useEffect(() => {
     fetchInterviews();
-  }, []);
+  }, [statusFilter]);
 
   // Format date function
   const formatDate = (dateString: string) => {
@@ -91,42 +112,45 @@ export default function IntervieweeInterviewsPage() {
     }
   };
 
-  // Join interview 
-  const joinInterview = (id: string) => {
+  // Join interview - updated to use Supabase
+  const joinInterview = async (id: string) => {
     toast({
       title: "Joining interview",
-      description: "You will be redirected to the video call shortly.",
+      description: "Updating interview status...",
     });
     
-    // Mock API call to update status
-    fetch(`http://localhost:5000/interviewee/interviews/${id}/join`, {
-      method: "POST"
-    })
-    .then(response => {
-      if (!response.ok) throw new Error("Failed to join interview");
-      return response.json();
-    })
-    .then(data => {
-      // Redirect would happen here in a real implementation
-      console.log("Join URL:", data.join_url);
-      window.open(data.join_url, "_blank");
+    try {
+      // Update interview status to "In Progress"
+      const { error } = await supabase
+        .from('interviews')
+        .update({ status: 'In Progress' })
+        .eq('id', id);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Interview Joined",
+        description: "You will be redirected to the video call shortly.",
+      });
+      
+      // Mock video call URL - in a real app, this would come from a video call service
+      const mockJoinUrl = `https://video-call/${id}`;
+      window.open(mockJoinUrl, "_blank");
       
       // Refresh the interviews to show updated status
       fetchInterviews();
-    })
-    .catch(error => {
+    } catch (error: any) {
+      console.error("Error joining interview:", error);
       toast({
         title: "Error",
         description: "Failed to join the interview. Please try again.",
         variant: "destructive",
       });
-    });
+    }
   };
 
   // Filter interviews based on status
-  const filteredInterviews = interviews.filter((interview) => {
-    return statusFilter ? interview.status === statusFilter : true;
-  });
+  const filteredInterviews = interviews;
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -224,7 +248,7 @@ export default function IntervieweeInterviewsPage() {
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                   <div className="space-y-2">
                     <div className="flex items-center justify-between sm:justify-start">
-                      <h3 className="font-medium text-lg">{interview.job_role}</h3>
+                      <h3 className="font-medium text-lg">{interview.job_role || "Interview"}</h3>
                       <span
                         className={`ml-3 inline-block px-2 py-1 rounded-full text-xs font-medium ${
                           interview.status === "Completed" || interview.status === "Under Review"
@@ -242,7 +266,7 @@ export default function IntervieweeInterviewsPage() {
                     
                     <div className="flex items-center text-muted-foreground">
                       <User className="h-4 w-4 mr-2" />
-                      <span>Interviewer: {interview.interviewer_name}</span>
+                      <span>Interviewer: {interview.interviewer?.name || "Not assigned"}</span>
                     </div>
                     
                     <div className="flex items-center text-muted-foreground">

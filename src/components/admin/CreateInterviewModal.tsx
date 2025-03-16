@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -33,6 +33,7 @@ import { CalendarIcon, Upload } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 
 interface CreateInterviewModalProps {
   isOpen: boolean;
@@ -43,6 +44,12 @@ interface CreateInterviewModalProps {
 const formSchema = z.object({
   candidateName: z.string().min(2, {
     message: "Candidate name must be at least 2 characters.",
+  }),
+  candidateEmail: z.string().email({
+    message: "Please enter a valid email address.",
+  }),
+  roleApplied: z.string().min(2, {
+    message: "Job role must be at least 2 characters.",
   }),
   interviewer: z.string({
     required_error: "Please select an interviewer.",
@@ -59,20 +66,24 @@ const formSchema = z.object({
   format: z.string({
     required_error: "Please select an interview format.",
   }),
-  jobRole: z.string().min(2, {
-    message: "Job role must be at least 2 characters.",
+  organization: z.string({
+    required_error: "Please select an organization.",
   }),
   useQuestionBank: z.boolean().default(false),
 });
 
 type FormValues = z.infer<typeof formSchema>;
 
-// Mock interviewers data
-const interviewers = [
-  { id: "1", name: "Isha Patel", expertise: "Frontend Developer" },
-  { id: "2", name: "Michael Chen", expertise: "UX Designer" },
-  { id: "3", name: "Alex Rivera", expertise: "Product Manager" },
-];
+interface Interviewer {
+  id: string;
+  name: string;
+  specialization?: string;
+}
+
+interface Organization {
+  id: string;
+  name: string;
+}
 
 export default function CreateInterviewModal({
   isOpen,
@@ -80,14 +91,61 @@ export default function CreateInterviewModal({
   onInterviewCreated,
 }: CreateInterviewModalProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const [interviewers, setInterviewers] = useState<Interviewer[]>([]);
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  // Fetch interviewers and organizations when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      fetchInterviewers();
+      fetchOrganizations();
+    }
+  }, [isOpen]);
+
+  const fetchInterviewers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('interviewers')
+        .select('id, name, specialization');
+      
+      if (error) throw error;
+      setInterviewers(data || []);
+    } catch (error: any) {
+      console.error('Error fetching interviewers:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load interviewers. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const fetchOrganizations = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('organizations')
+        .select('id, name');
+      
+      if (error) throw error;
+      setOrganizations(data || []);
+    } catch (error: any) {
+      console.error('Error fetching organizations:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load organizations. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       candidateName: "",
-      jobRole: "",
+      candidateEmail: "",
+      roleApplied: "",
       useQuestionBank: false,
     },
   });
@@ -103,36 +161,53 @@ export default function CreateInterviewModal({
       // Combine date and time
       const dateTimeString = `${format(dateObj, "yyyy-MM-dd")}T${timeString}:00Z`;
       
-      // Map form data to API format
-      const interviewData = {
-        candidate_name: data.candidateName,
-        interviewer_name: interviewers.find(i => i.id === data.interviewer)?.name || "",
-        scheduled_at: dateTimeString,
-        status: "Scheduled",
-        job_role: data.jobRole,
-        feedback_submitted: "No",
-        format: data.format,
-        duration: data.duration
-      };
+      // Step 1: Check if interviewee exists or create a new one
+      let intervieweeId = "";
+      const { data: existingInterviewees, error: intervieweeCheckError } = await supabase
+        .from('interviewees')
+        .select('id')
+        .eq('email', data.candidateEmail)
+        .limit(1);
       
-      console.log("Sending interview data to backend:", interviewData);
+      if (intervieweeCheckError) throw intervieweeCheckError;
       
-      // Send data to backend API
-      const response = await fetch("http://localhost:5000/interviews", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(interviewData),
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to create interview");
+      if (existingInterviewees && existingInterviewees.length > 0) {
+        intervieweeId = existingInterviewees[0].id;
+      } else {
+        // Create new interviewee
+        const { data: newInterviewee, error: createIntervieweeError } = await supabase
+          .from('interviewees')
+          .insert({
+            name: data.candidateName,
+            email: data.candidateEmail,
+            role_applied: data.roleApplied,
+            organization_id: data.organization
+          })
+          .select('id')
+          .single();
+        
+        if (createIntervieweeError) throw createIntervieweeError;
+        if (!newInterviewee) throw new Error("Failed to create interviewee");
+        
+        intervieweeId = newInterviewee.id;
       }
       
-      const responseData = await response.json();
-      console.log("Interview created successfully:", responseData);
+      // Step 2: Create the interview
+      const { data: newInterview, error: createInterviewError } = await supabase
+        .from('interviews')
+        .insert({
+          interviewer_id: data.interviewer,
+          interviewee_id: intervieweeId,
+          organization_id: data.organization,
+          scheduled_at: dateTimeString,
+          status: 'Scheduled',
+          feedback_submitted: 'No',
+          notes: `Format: ${data.format}, Duration: ${data.duration} minutes`
+        })
+        .select()
+        .single();
+      
+      if (createInterviewError) throw createInterviewError;
       
       // Success notification
       toast({
@@ -148,27 +223,16 @@ export default function CreateInterviewModal({
       if (onInterviewCreated) {
         onInterviewCreated();
       }
-      
-      // Navigate to interviews page to see the new interview
-      navigate("/admin/interviews");
-    } catch (error) {
+    } catch (error: any) {
       // Error notification
       console.error("Error creating interview:", error);
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to create interview. Please try again.",
+        description: error.message || "Failed to create interview. Please try again.",
         variant: "destructive",
       });
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      console.log("File selected:", file.name);
-      // Handle file upload logic here
     }
   };
 
@@ -194,15 +258,76 @@ export default function CreateInterviewModal({
     >
       <Form {...form}>
         <form className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="candidateName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Candidate Name</FormLabel>
+                  <FormControl>
+                    <Input placeholder="John Doe" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="candidateEmail"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Candidate Email</FormLabel>
+                  <FormControl>
+                    <Input placeholder="john.doe@example.com" type="email" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
           <FormField
             control={form.control}
-            name="candidateName"
+            name="roleApplied"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Candidate Name</FormLabel>
+                <FormLabel>Job Role</FormLabel>
                 <FormControl>
-                  <Input placeholder="John Doe" {...field} />
+                  <Input placeholder="Software Engineer" {...field} />
                 </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="organization"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Organization</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select an organization" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {organizations.length > 0 ? (
+                      organizations.map((org) => (
+                        <SelectItem key={org.id} value={org.id}>
+                          {org.name}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <SelectItem value="none" disabled>
+                        No organizations available. Add one first.
+                      </SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
                 <FormMessage />
               </FormItem>
             )}
@@ -224,12 +349,12 @@ export default function CreateInterviewModal({
                     {interviewers.length > 0 ? (
                       interviewers.map((interviewer) => (
                         <SelectItem key={interviewer.id} value={interviewer.id}>
-                          {interviewer.name} ({interviewer.expertise})
+                          {interviewer.name} {interviewer.specialization ? `(${interviewer.specialization})` : ''}
                         </SelectItem>
                       ))
                     ) : (
                       <SelectItem value="none" disabled>
-                        No interviewers available. Add one in Manage Interviewers.
+                        No interviewers available. Add one first.
                       </SelectItem>
                     )}
                   </SelectContent>
@@ -356,41 +481,6 @@ export default function CreateInterviewModal({
                 </FormItem>
               )}
             />
-          </div>
-
-          <FormField
-            control={form.control}
-            name="jobRole"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Job Role</FormLabel>
-                <FormControl>
-                  <Input placeholder="Software Engineer" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <div className="space-y-2">
-            <FormLabel>Resume (Optional)</FormLabel>
-            <div className="flex items-center justify-center w-full">
-              <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-gray-50 dark:hover:bg-gray-800 hover:bg-gray-100">
-                <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                  <Upload className="w-8 h-8 mb-3 text-gray-500" />
-                  <p className="mb-2 text-sm text-gray-500">
-                    <span className="font-semibold">Click to upload</span> or drag and drop
-                  </p>
-                  <p className="text-xs text-gray-500">PDF, DOC, or DOCX (MAX. 10MB)</p>
-                </div>
-                <input 
-                  type="file" 
-                  className="hidden" 
-                  accept=".pdf,.doc,.docx"
-                  onChange={handleFileChange}
-                />
-              </label>
-            </div>
           </div>
 
           <FormField

@@ -1,5 +1,4 @@
-
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,13 +14,27 @@ import { Switch } from "@radix-ui/react-switch";
 import { X, Plus, Pencil } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { supabase } from "@/integrations/supabase/client";
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface Interviewer {
   id: string;
   name: string;
-  expertise: string;
-  availability: string;
+  email: string;
+  specialization: string;
+  organization_id?: string;
   active: boolean;
+}
+
+interface Organization {
+  id: string;
+  name: string;
 }
 
 interface ManageInterviewersModalProps {
@@ -29,51 +42,84 @@ interface ManageInterviewersModalProps {
   onClose: () => void;
 }
 
-// Mock interviewers data
-const initialInterviewers: Interviewer[] = [
-  { 
-    id: "1", 
-    name: "Isha Patel", 
-    expertise: "Frontend Developer", 
-    availability: "Mon-Fri, 9-11 AM", 
-    active: true 
-  },
-  { 
-    id: "2", 
-    name: "Michael Chen", 
-    expertise: "UX Designer", 
-    availability: "Mon-Wed, 1-5 PM", 
-    active: true 
-  },
-  { 
-    id: "3", 
-    name: "Alex Rivera", 
-    expertise: "Product Manager", 
-    availability: "Tue-Thu, 10 AM-3 PM", 
-    active: false 
-  },
-];
-
 export default function ManageInterviewersModal({
   isOpen,
   onClose,
 }: ManageInterviewersModalProps) {
-  const [interviewers, setInterviewers] = useState<Interviewer[]>(initialInterviewers);
+  const [interviewers, setInterviewers] = useState<Interviewer[]>([]);
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [isAdding, setIsAdding] = useState(false);
   const [isEditing, setIsEditing] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   const [newInterviewer, setNewInterviewer] = useState({
     name: "",
-    expertise: "",
-    availability: ""
+    email: "",
+    specialization: "",
+    organization_id: ""
   });
   const { toast } = useToast();
+
+  // Fetch data when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      fetchInterviewers();
+      fetchOrganizations();
+    }
+  }, [isOpen]);
+
+  const fetchInterviewers = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('interviewers')
+        .select('*');
+      
+      if (error) throw error;
+      
+      // Transform to add active field (all are active by default)
+      const transformedData = data?.map(interviewer => ({
+        ...interviewer,
+        active: true
+      })) || [];
+      
+      setInterviewers(transformedData);
+    } catch (error: any) {
+      console.error("Error fetching interviewers:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load interviewers",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchOrganizations = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('organizations')
+        .select('id, name');
+      
+      if (error) throw error;
+      setOrganizations(data || []);
+    } catch (error: any) {
+      console.error("Error fetching organizations:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load organizations",
+        variant: "destructive"
+      });
+    }
+  };
 
   const handleAddNew = () => {
     setIsAdding(true);
     setNewInterviewer({
       name: "",
-      expertise: "",
-      availability: ""
+      email: "",
+      specialization: "",
+      organization_id: ""
     });
   };
 
@@ -81,91 +127,137 @@ export default function ManageInterviewersModal({
     setIsEditing(interviewer.id);
     setNewInterviewer({
       name: interviewer.name,
-      expertise: interviewer.expertise,
-      availability: interviewer.availability
+      email: interviewer.email,
+      specialization: interviewer.specialization || "",
+      organization_id: interviewer.organization_id || ""
     });
   };
 
-  const handleSaveNew = () => {
-    if (!newInterviewer.name || !newInterviewer.expertise) {
+  const handleSaveNew = async () => {
+    if (!newInterviewer.name || !newInterviewer.email) {
       toast({
         title: "Required fields missing",
-        description: "Name and expertise are required fields.",
+        description: "Name and email are required fields.",
         variant: "destructive"
       });
       return;
     }
 
-    // Check for duplicate names
-    const isDuplicate = interviewers.some(i => 
-      i.name.toLowerCase() === newInterviewer.name.toLowerCase());
-
-    if (isDuplicate) {
-      const confirm = window.confirm(
-        `Another interviewer named "${newInterviewer.name}" exists. Continue?`
-      );
-      if (!confirm) return;
-    }
-
-    const newId = (interviewers.length + 1).toString();
-    setInterviewers([
-      ...interviewers,
-      {
-        id: newId,
-        name: newInterviewer.name,
-        expertise: newInterviewer.expertise,
-        availability: newInterviewer.availability || "Not specified",
-        active: true
+    try {
+      // Check for duplicate email
+      const { data: existingWithEmail } = await supabase
+        .from('interviewers')
+        .select('id')
+        .eq('email', newInterviewer.email);
+      
+      if (existingWithEmail && existingWithEmail.length > 0) {
+        const confirm = window.confirm(
+          `An interviewer with email "${newInterviewer.email}" already exists. Continue?`
+        );
+        if (!confirm) return;
       }
-    ]);
 
-    toast({
-      title: "Interviewer added",
-      description: `${newInterviewer.name} has been added to the interviewer pool.`
-    });
-
-    setIsAdding(false);
-    setNewInterviewer({
-      name: "",
-      expertise: "",
-      availability: ""
-    });
+      // Create new interviewer
+      const { data, error } = await supabase
+        .from('interviewers')
+        .insert({
+          name: newInterviewer.name,
+          email: newInterviewer.email,
+          specialization: newInterviewer.specialization || null,
+          organization_id: newInterviewer.organization_id || null
+        })
+        .select();
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Interviewer added",
+        description: `${newInterviewer.name} has been added to the interviewer pool.`
+      });
+      
+      // Refresh interviewers list
+      fetchInterviewers();
+      
+      setIsAdding(false);
+      setNewInterviewer({
+        name: "",
+        email: "",
+        specialization: "",
+        organization_id: ""
+      });
+    } catch (error: any) {
+      console.error("Error adding interviewer:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to add interviewer",
+        variant: "destructive"
+      });
+    }
   };
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (!isEditing) return;
     
-    if (!newInterviewer.name || !newInterviewer.expertise) {
+    if (!newInterviewer.name || !newInterviewer.email) {
       toast({
         title: "Required fields missing",
-        description: "Name and expertise are required fields.",
+        description: "Name and email are required fields.",
         variant: "destructive"
       });
       return;
     }
 
-    setInterviewers(interviewers.map(i => 
-      i.id === isEditing 
-        ? { 
-            ...i, 
-            name: newInterviewer.name,
-            expertise: newInterviewer.expertise,
-            availability: newInterviewer.availability || "Not specified"
-          } 
-        : i
-    ));
+    try {
+      // Check for duplicate email (excluding current interviewer)
+      const { data: existingWithEmail } = await supabase
+        .from('interviewers')
+        .select('id')
+        .eq('email', newInterviewer.email)
+        .neq('id', isEditing);
+      
+      if (existingWithEmail && existingWithEmail.length > 0) {
+        const confirm = window.confirm(
+          `Another interviewer with email "${newInterviewer.email}" already exists. Continue?`
+        );
+        if (!confirm) return;
+      }
 
-    toast({
-      title: "Interviewer updated",
-      description: `${newInterviewer.name}'s information has been updated.`
-    });
-
-    setIsEditing(null);
-    setNewInterviewer({
-      name: "",
-      expertise: "",
-      availability: ""
-    });
+      // Update interviewer
+      const { error } = await supabase
+        .from('interviewers')
+        .update({
+          name: newInterviewer.name,
+          email: newInterviewer.email,
+          specialization: newInterviewer.specialization || null,
+          organization_id: newInterviewer.organization_id || null
+        })
+        .eq('id', isEditing);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Interviewer updated",
+        description: `${newInterviewer.name}'s information has been updated.`
+      });
+      
+      // Refresh interviewers list
+      fetchInterviewers();
+      
+      setIsEditing(null);
+      setNewInterviewer({
+        name: "",
+        email: "",
+        specialization: "",
+        organization_id: ""
+      });
+    } catch (error: any) {
+      console.error("Error updating interviewer:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update interviewer",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleCancelEdit = () => {
@@ -173,12 +265,15 @@ export default function ManageInterviewersModal({
     setIsAdding(false);
     setNewInterviewer({
       name: "",
-      expertise: "",
-      availability: ""
+      email: "",
+      specialization: "",
+      organization_id: ""
     });
   };
 
-  const toggleStatus = (id: string) => {
+  const toggleStatus = async (id: string, currentStatus: boolean) => {
+    // In a real app with authentication, you might deactivate the user account
+    // For this demo, we're just toggling the status locally
     setInterviewers(interviewers.map(i => 
       i.id === id ? { ...i, active: !i.active } : i
     ));
@@ -245,28 +340,48 @@ export default function ManageInterviewersModal({
                         />
                       </div>
                       <div>
+                        <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                          Email <span className="text-red-500">*</span>
+                        </label>
+                        <Input
+                          id="email"
+                          type="email"
+                          value={newInterviewer.email}
+                          onChange={(e) => setNewInterviewer({...newInterviewer, email: e.target.value})}
+                          placeholder="email@example.com"
+                          className="mt-1"
+                        />
+                      </div>
+                      <div>
                         <label htmlFor="expertise" className="block text-sm font-medium text-gray-700">
-                          Expertise <span className="text-red-500">*</span>
+                          Expertise
                         </label>
                         <Input
                           id="expertise"
-                          value={newInterviewer.expertise}
-                          onChange={(e) => setNewInterviewer({...newInterviewer, expertise: e.target.value})}
+                          value={newInterviewer.specialization}
+                          onChange={(e) => setNewInterviewer({...newInterviewer, specialization: e.target.value})}
                           placeholder="e.g., Frontend Developer"
                           className="mt-1"
                         />
                       </div>
                       <div>
-                        <label htmlFor="availability" className="block text-sm font-medium text-gray-700">
-                          Availability
+                        <label htmlFor="organization" className="block text-sm font-medium text-gray-700">
+                          Organization
                         </label>
-                        <Input
-                          id="availability"
-                          value={newInterviewer.availability}
-                          onChange={(e) => setNewInterviewer({...newInterviewer, availability: e.target.value})}
-                          placeholder="e.g., Mon-Fri, 9-11 AM"
-                          className="mt-1"
-                        />
+                        <Select 
+                          value={newInterviewer.organization_id} 
+                          onValueChange={(value) => setNewInterviewer({...newInterviewer, organization_id: value})}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select organization" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">None</SelectItem>
+                            {organizations.map(org => (
+                              <SelectItem key={org.id} value={org.id}>{org.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
                     <div className="flex justify-end space-x-2">
@@ -303,28 +418,48 @@ export default function ManageInterviewersModal({
                         />
                       </div>
                       <div>
+                        <label htmlFor="edit-email" className="block text-sm font-medium text-gray-700">
+                          Email <span className="text-red-500">*</span>
+                        </label>
+                        <Input
+                          id="edit-email"
+                          type="email"
+                          value={newInterviewer.email}
+                          onChange={(e) => setNewInterviewer({...newInterviewer, email: e.target.value})}
+                          placeholder="email@example.com"
+                          className="mt-1"
+                        />
+                      </div>
+                      <div>
                         <label htmlFor="edit-expertise" className="block text-sm font-medium text-gray-700">
-                          Expertise <span className="text-red-500">*</span>
+                          Expertise
                         </label>
                         <Input
                           id="edit-expertise"
-                          value={newInterviewer.expertise}
-                          onChange={(e) => setNewInterviewer({...newInterviewer, expertise: e.target.value})}
+                          value={newInterviewer.specialization}
+                          onChange={(e) => setNewInterviewer({...newInterviewer, specialization: e.target.value})}
                           placeholder="e.g., Frontend Developer"
                           className="mt-1"
                         />
                       </div>
                       <div>
-                        <label htmlFor="edit-availability" className="block text-sm font-medium text-gray-700">
-                          Availability
+                        <label htmlFor="edit-organization" className="block text-sm font-medium text-gray-700">
+                          Organization
                         </label>
-                        <Input
-                          id="edit-availability"
-                          value={newInterviewer.availability}
-                          onChange={(e) => setNewInterviewer({...newInterviewer, availability: e.target.value})}
-                          placeholder="e.g., Mon-Fri, 9-11 AM"
-                          className="mt-1"
-                        />
+                        <Select 
+                          value={newInterviewer.organization_id || ""} 
+                          onValueChange={(value) => setNewInterviewer({...newInterviewer, organization_id: value})}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select organization" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">None</SelectItem>
+                            {organizations.map(org => (
+                              <SelectItem key={org.id} value={org.id}>{org.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
                     <div className="flex justify-end space-x-2">
@@ -340,14 +475,23 @@ export default function ManageInterviewersModal({
               </Card>
             )}
 
+            {!isAdding && !isEditing && (
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-medium">Interviewer Pool</h3>
+                <Button onClick={handleAddNew} size="sm">
+                  <Plus className="mr-2 h-4 w-4" /> Add New
+                </Button>
+              </div>
+            )}
+
             {!isAdding && !isEditing && interviewers.length > 0 && (
               <div className="border rounded-md">
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>Name</TableHead>
+                      <TableHead>Email</TableHead>
                       <TableHead>Expertise</TableHead>
-                      <TableHead>Availability</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
@@ -356,8 +500,8 @@ export default function ManageInterviewersModal({
                     {interviewers.map((interviewer) => (
                       <TableRow key={interviewer.id}>
                         <TableCell className="font-medium">{interviewer.name}</TableCell>
-                        <TableCell>{interviewer.expertise}</TableCell>
-                        <TableCell>{interviewer.availability}</TableCell>
+                        <TableCell>{interviewer.email}</TableCell>
+                        <TableCell>{interviewer.specialization || "Not specified"}</TableCell>
                         <TableCell>
                           <div className="flex items-center">
                             <span className={`mr-2 h-2 w-2 rounded-full ${interviewer.active ? 'bg-green-500' : 'bg-red-500'}`}></span>
@@ -377,7 +521,7 @@ export default function ManageInterviewersModal({
                             <Button
                               variant={interviewer.active ? "outline" : "default"}
                               size="sm"
-                              onClick={() => toggleStatus(interviewer.id)}
+                              onClick={() => toggleStatus(interviewer.id, interviewer.active)}
                             >
                               {interviewer.active ? 'Deactivate' : 'Activate'}
                             </Button>
@@ -387,6 +531,12 @@ export default function ManageInterviewersModal({
                     ))}
                   </TableBody>
                 </Table>
+              </div>
+            )}
+
+            {loading && (
+              <div className="text-center p-4">
+                <p className="text-muted-foreground">Loading interviewers...</p>
               </div>
             )}
           </>
