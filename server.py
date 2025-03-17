@@ -1,4 +1,3 @@
-
 from flask import Flask, request, jsonify, make_response
 from flask_cors import CORS
 import os
@@ -124,6 +123,20 @@ def validate_time(time_string):
     
     except ValueError:
         return False, "Invalid time format. Use HH:MM (24-hour format)"
+
+# Make sure to add CORS headers for all responses
+@app.after_request
+def add_cors_headers(response):
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+    return response
+
+# Handle OPTIONS requests for CORS preflight
+@app.route('/api/interviews', methods=['OPTIONS'])
+@app.route('/api/interviews/<id>', methods=['OPTIONS'])
+def handle_options(id=None):
+    return make_response('', 200)
 
 # API endpoint for creating interviews
 @app.route('/api/interviews', methods=['POST'])

@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -41,7 +41,7 @@ interface CreateInterviewModalProps {
   onInterviewCreated?: () => void;
 }
 
-// Mock interviewers data
+// Mock interviewers data - you can replace this with a real API call
 const interviewers = [
   { id: "1", name: "Isha Patel", expertise: "Frontend Developer" },
   { id: "2", name: "Michael Chen", expertise: "UX Designer" },
@@ -69,9 +69,11 @@ export default function CreateInterviewModal({
 
   const onSubmit = async (data: InterviewFormData) => {
     setIsLoading(true);
+    console.log("Submitting form data:", data);
+    console.log("Resume file:", resumeFile);
     
     try {
-      // Call the createInterview function from our new API
+      // Call the createInterview function which now uses the backend
       const result = await createInterview(data, resumeFile);
       
       if (!result.success) {
@@ -81,8 +83,10 @@ export default function CreateInterviewModal({
       // Success notification
       toast({
         title: "Interview Scheduled",
-        description: `Interview for ${data.candidateName} has been created.`,
+        description: `Interview for ${data.candidateName} has been created via backend.`,
       });
+      
+      console.log("Interview created successfully:", result.data);
       
       // Reset form and close modal
       form.reset();

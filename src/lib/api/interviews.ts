@@ -1,5 +1,4 @@
 
-import { supabase, uploadResume } from '../supabase';
 import { format, isValid, parseISO } from 'date-fns';
 import * as z from 'zod';
 
@@ -32,21 +31,7 @@ export const interviewFormSchema = z.object({
 // Define the type for interviewData based on the schema
 export type InterviewFormData = z.infer<typeof interviewFormSchema>;
 
-// Interface for the interview data to be stored in Supabase
-interface InterviewData {
-  candidate_name: string;
-  interviewer_name: string;
-  scheduled_at: string;
-  duration_minutes: number;
-  format: string;
-  job_role: string;
-  status: string;
-  feedback_submitted: string;
-  resume_url?: string;
-  use_question_bank: boolean;
-}
-
-// Function to create a new interview in Supabase
+// Function to create a new interview using the Flask backend
 export const createInterview = async (
   formData: InterviewFormData, 
   resumeFile?: File | null
@@ -55,98 +40,40 @@ export const createInterview = async (
     // Validate the form data
     const validatedData = interviewFormSchema.parse(formData);
     
-    // Check if date is valid and in the future
-    const currentDate = new Date();
-    if (validatedData.date < currentDate && validatedData.date.setHours(0,0,0,0) !== currentDate.setHours(0,0,0,0)) {
-      return { 
-        success: false, 
-        error: "Interview date must be today or in the future." 
-      };
-    }
+    // Create FormData object for sending to the backend (needed for file upload)
+    const formDataObj = new FormData();
     
-    // Validate time format
-    const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
-    if (!timeRegex.test(validatedData.time)) {
-      return { 
-        success: false, 
-        error: "Time must be in a valid format (HH:MM)." 
-      };
-    }
+    // Add all form fields to FormData
+    formDataObj.append('candidateName', validatedData.candidateName);
+    formDataObj.append('interviewer', validatedData.interviewer);
+    formDataObj.append('date', format(validatedData.date, "yyyy-MM-dd"));
+    formDataObj.append('time', validatedData.time);
+    formDataObj.append('duration', validatedData.duration);
+    formDataObj.append('format', validatedData.format);
+    formDataObj.append('jobRole', validatedData.jobRole);
+    formDataObj.append('useQuestionBank', validatedData.useQuestionBank.toString());
     
-    // Parse duration to number
-    const durationMinutes = parseInt(validatedData.duration);
-    if (isNaN(durationMinutes) || durationMinutes <= 0) {
-      return { 
-        success: false, 
-        error: "Duration must be a positive number." 
-      };
-    }
-    
-    // Combine date and time into a timestamp
-    const dateTimeString = `${format(validatedData.date, "yyyy-MM-dd")}T${validatedData.time}:00`;
-    const scheduledAt = new Date(dateTimeString).toISOString();
-    
-    // Upload resume if provided
-    let resumeUrl: string | null = null;
+    // Add resume file if provided
     if (resumeFile) {
-      // Validate file type
-      const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
-      if (!allowedTypes.includes(resumeFile.type)) {
-        return { 
-          success: false, 
-          error: "Resume must be a PDF, DOC, or DOCX file." 
-        };
-      }
-      
-      // Validate file size (max 10MB)
-      const maxSize = 10 * 1024 * 1024; // 10MB in bytes
-      if (resumeFile.size > maxSize) {
-        return { 
-          success: false, 
-          error: "Resume file size must not exceed 10MB." 
-        };
-      }
-      
-      // Upload file to Supabase Storage
-      resumeUrl = await uploadResume(resumeFile, validatedData.candidateName);
+      formDataObj.append('resume', resumeFile);
     }
     
-    // Prepare data for Supabase
-    const interviewData: InterviewData = {
-      candidate_name: validatedData.candidateName,
-      interviewer_name: validatedData.interviewer,
-      scheduled_at: scheduledAt,
-      duration_minutes: durationMinutes,
-      format: validatedData.format,
-      job_role: validatedData.jobRole,
-      status: "Scheduled",
-      feedback_submitted: "No",
-      use_question_bank: validatedData.useQuestionBank,
-    };
+    // Make POST request to the Flask backend
+    const response = await fetch('http://localhost:5000/api/interviews', {
+      method: 'POST',
+      body: formDataObj,
+    });
     
-    // Add resume URL if available
-    if (resumeUrl) {
-      interviewData.resume_url = resumeUrl;
-    }
+    // Parse the response
+    const result = await response.json();
     
-    // Insert data into Supabase
-    const { data, error } = await supabase
-      .from('interviews')
-      .insert(interviewData)
-      .select()
-      .single();
-    
-    if (error) {
-      console.error("Error creating interview:", error);
-      return { 
-        success: false, 
-        error: error.message 
-      };
+    if (!response.ok) {
+      throw new Error(result.error || 'Failed to create interview');
     }
     
     return { 
       success: true, 
-      data 
+      data: result.data 
     };
   } catch (error) {
     console.error("Error in createInterview:", error);
@@ -166,16 +93,17 @@ export const createInterview = async (
   }
 };
 
-// Function to get all interviews
+// Function to get all interviews from the backend
 export const getInterviews = async () => {
   try {
-    const { data, error } = await supabase
-      .from('interviews')
-      .select('*')
-      .order('scheduled_at', { ascending: true });
+    const response = await fetch('http://localhost:5000/api/interviews');
+    const result = await response.json();
     
-    if (error) throw error;
-    return { success: true, data };
+    if (!response.ok) {
+      throw new Error(result.error || 'Failed to fetch interviews');
+    }
+    
+    return { success: true, data: result.data };
   } catch (error) {
     console.error("Error fetching interviews:", error);
     return { 
@@ -185,17 +113,17 @@ export const getInterviews = async () => {
   }
 };
 
-// Function to get a specific interview by ID
+// Function to get a specific interview by ID from the backend
 export const getInterviewById = async (id: string) => {
   try {
-    const { data, error } = await supabase
-      .from('interviews')
-      .select('*')
-      .eq('id', id)
-      .single();
+    const response = await fetch(`http://localhost:5000/api/interviews/${id}`);
+    const result = await response.json();
     
-    if (error) throw error;
-    return { success: true, data };
+    if (!response.ok) {
+      throw new Error(result.error || 'Failed to fetch interview');
+    }
+    
+    return { success: true, data: result.data };
   } catch (error) {
     console.error(`Error fetching interview with ID ${id}:`, error);
     return { 
@@ -205,18 +133,30 @@ export const getInterviewById = async (id: string) => {
   }
 };
 
-// Function to update an interview
-export const updateInterview = async (id: string, updateData: Partial<InterviewData>) => {
+// Function to update an interview through the backend
+export const updateInterview = async (id: string, updateData: Partial<InterviewFormData>) => {
   try {
-    const { data, error } = await supabase
-      .from('interviews')
-      .update(updateData)
-      .eq('id', id)
-      .select()
-      .single();
+    // Format date if it exists in updateData
+    let formattedData: any = { ...updateData };
+    if (updateData.date) {
+      formattedData.date = format(updateData.date, "yyyy-MM-dd");
+    }
     
-    if (error) throw error;
-    return { success: true, data };
+    const response = await fetch(`http://localhost:5000/api/interviews/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(formattedData),
+    });
+    
+    const result = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(result.error || 'Failed to update interview');
+    }
+    
+    return { success: true, data: result.data };
   } catch (error) {
     console.error(`Error updating interview with ID ${id}:`, error);
     return { 
@@ -226,15 +166,19 @@ export const updateInterview = async (id: string, updateData: Partial<InterviewD
   }
 };
 
-// Function to delete an interview
+// Function to delete an interview through the backend
 export const deleteInterview = async (id: string) => {
   try {
-    const { error } = await supabase
-      .from('interviews')
-      .delete()
-      .eq('id', id);
+    const response = await fetch(`http://localhost:5000/api/interviews/${id}`, {
+      method: 'DELETE',
+    });
     
-    if (error) throw error;
+    const result = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(result.error || 'Failed to delete interview');
+    }
+    
     return { success: true };
   } catch (error) {
     console.error(`Error deleting interview with ID ${id}:`, error);

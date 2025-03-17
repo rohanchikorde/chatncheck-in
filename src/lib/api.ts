@@ -170,7 +170,6 @@ export const candidatesApi = {
 // Applications API
 export const applicationsApi = {
   async getAll() {
-    // Simplify the nested query to avoid deep type instantiation
     const { data, error } = await supabase
       .from('applications')
       .select('*');
@@ -179,7 +178,6 @@ export const applicationsApi = {
   },
   
   async getById(id: string) {
-    // Simplify the nested query to avoid deep type instantiation
     const { data, error } = await supabase
       .from('applications')
       .select('*')
@@ -190,7 +188,6 @@ export const applicationsApi = {
   },
   
   async getByCandidate(candidateId: string) {
-    // Fix type instantiation issue by simplifying the query
     const { data, error } = await supabase
       .from('applications')
       .select('*')
@@ -222,92 +219,8 @@ export const applicationsApi = {
   }
 };
 
-// Interviews API
-export const interviewsApi = {
-  async getAll() {
-    // Simplify the query to avoid deeply nested types
-    const { data, error } = await supabase
-      .from('interviews')
-      .select('*');
-    if (error) throw error;
-    return data;
-  },
-  
-  async getById(id: string) {
-    // Simplify the query to avoid deeply nested types
-    const { data, error } = await supabase
-      .from('interviews')
-      .select('*')
-      .eq('id', id)
-      .single();
-    if (error) throw error;
-    return data;
-  },
-  
-  async getByApplication(applicationId: string) {
-    // Simplify the query to avoid deeply nested types
-    const { data, error } = await supabase
-      .from('interviews')
-      .select('*')
-      .eq('application_id', applicationId);
-    if (error) throw error;
-    return data;
-  },
-  
-  async getByInterviewer(interviewerId: string) {
-    // Simplify the query to avoid deeply nested types
-    const { data, error } = await supabase
-      .from('interviews')
-      .select('*')
-      .eq('interviewer_name', interviewerId);
-    if (error) throw error;
-    return data;
-  },
-  
-  async create(interview: {
-    candidate_name: string,
-    interviewer_name: string,
-    scheduled_at: string,
-    duration_minutes: number,
-    format: string,
-    job_role: string,
-    status: string,
-    feedback_submitted?: string,
-    resume_url?: string | null,
-    use_question_bank?: boolean
-  }) {
-    const { data, error } = await supabase.from('interviews').insert(interview).select().single();
-    if (error) throw error;
-    return data;
-  },
-  
-  async updateStatus(id: string, status: string) {
-    const { data, error } = await supabase
-      .from('interviews')
-      .update({ status: status })
-      .eq('id', id)
-      .select()
-      .single();
-    if (error) throw error;
-    return data;
-  },
-  
-  async reschedule(id: string, newDateTime: string) {
-    const { data, error } = await supabase
-      .from('interviews')
-      .update({ scheduled_at: newDateTime })
-      .eq('id', id)
-      .select()
-      .single();
-    if (error) throw error;
-    return data;
-  },
-  
-  async delete(id: string) {
-    const { error } = await supabase.from('interviews').delete().eq('id', id);
-    if (error) throw error;
-  }
-};
+// Note: The interviewsApi functions have been removed since they're now 
+// handled via the Flask backend in src/lib/api/interviews.ts
 
 // Role Skills API
 export const roleSkillsApi = {
