@@ -27,45 +27,19 @@ import {
 } from "@/components/ui/popover";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
 import { format } from "date-fns";
 import { CalendarIcon, Upload } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import { createInterview, interviewFormSchema } from "@/lib/api/interviews";
+import type { InterviewFormData } from "@/lib/api/interviews";
 
 interface CreateInterviewModalProps {
   isOpen: boolean;
   onClose: () => void;
   onInterviewCreated?: () => void;
 }
-
-const formSchema = z.object({
-  candidateName: z.string().min(2, {
-    message: "Candidate name must be at least 2 characters.",
-  }),
-  interviewer: z.string({
-    required_error: "Please select an interviewer.",
-  }),
-  date: z.date({
-    required_error: "A date is required.",
-  }),
-  time: z.string({
-    required_error: "A time is required.",
-  }),
-  duration: z.string({
-    required_error: "Please select a duration.",
-  }),
-  format: z.string({
-    required_error: "Please select an interview format.",
-  }),
-  jobRole: z.string().min(2, {
-    message: "Job role must be at least 2 characters.",
-  }),
-  useQuestionBank: z.boolean().default(false),
-});
-
-type FormValues = z.infer<typeof formSchema>;
 
 // Mock interviewers data
 const interviewers = [
@@ -80,11 +54,12 @@ export default function CreateInterviewModal({
   onInterviewCreated,
 }: CreateInterviewModalProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const [resumeFile, setResumeFile] = useState<File | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
+  const form = useForm<InterviewFormData>({
+    resolver: zodResolver(interviewFormSchema),
     defaultValues: {
       candidateName: "",
       jobRole: "",
@@ -92,47 +67,16 @@ export default function CreateInterviewModal({
     },
   });
 
-  const onSubmit = async (data: FormValues) => {
+  const onSubmit = async (data: InterviewFormData) => {
     setIsLoading(true);
     
     try {
-      // Format date and time into ISO format
-      const timeString = data.time;
-      const dateObj = data.date;
+      // Call the createInterview function from our new API
+      const result = await createInterview(data, resumeFile);
       
-      // Combine date and time
-      const dateTimeString = `${format(dateObj, "yyyy-MM-dd")}T${timeString}:00Z`;
-      
-      // Map form data to API format
-      const interviewData = {
-        candidate_name: data.candidateName,
-        interviewer_name: interviewers.find(i => i.id === data.interviewer)?.name || "",
-        scheduled_at: dateTimeString,
-        status: "Scheduled",
-        job_role: data.jobRole,
-        feedback_submitted: "No",
-        format: data.format,
-        duration: data.duration
-      };
-      
-      console.log("Sending interview data to backend:", interviewData);
-      
-      // Send data to backend API
-      const response = await fetch("http://localhost:5000/interviews", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(interviewData),
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to create interview");
+      if (!result.success) {
+        throw new Error(result.error);
       }
-      
-      const responseData = await response.json();
-      console.log("Interview created successfully:", responseData);
       
       // Success notification
       toast({
@@ -142,6 +86,7 @@ export default function CreateInterviewModal({
       
       // Reset form and close modal
       form.reset();
+      setResumeFile(null);
       onClose();
       
       // Call the callback function if provided
@@ -167,8 +112,8 @@ export default function CreateInterviewModal({
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setResumeFile(file);
       console.log("File selected:", file.name);
-      // Handle file upload logic here
     }
   };
 
@@ -223,7 +168,7 @@ export default function CreateInterviewModal({
                   <SelectContent>
                     {interviewers.length > 0 ? (
                       interviewers.map((interviewer) => (
-                        <SelectItem key={interviewer.id} value={interviewer.id}>
+                        <SelectItem key={interviewer.id} value={`${interviewer.name} (${interviewer.expertise})`}>
                           {interviewer.name} ({interviewer.expertise})
                         </SelectItem>
                       ))
@@ -382,6 +327,11 @@ export default function CreateInterviewModal({
                     <span className="font-semibold">Click to upload</span> or drag and drop
                   </p>
                   <p className="text-xs text-gray-500">PDF, DOC, or DOCX (MAX. 10MB)</p>
+                  {resumeFile && (
+                    <p className="mt-2 text-sm text-green-600">
+                      Selected file: {resumeFile.name}
+                    </p>
+                  )}
                 </div>
                 <input 
                   type="file" 
