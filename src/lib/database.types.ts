@@ -209,43 +209,48 @@ export interface Database {
       }
       interviews: {
         Row: {
-          interview_id: string
-          application_id: string
-          interviewer_id: string
-          round_number: number
-          interview_date_time: string
-          interview_status: string
+          id: string
+          candidate_name: string
+          interviewer_name: string
+          scheduled_at: string
+          duration_minutes: number
+          format: string
+          job_role: string
+          status: string
+          feedback_submitted: string
+          resume_url: string | null
+          use_question_bank: boolean
+          created_at: string
         }
         Insert: {
-          interview_id?: string
-          application_id: string
-          interviewer_id: string
-          round_number: number
-          interview_date_time: string
-          interview_status: string
+          id?: string
+          candidate_name: string
+          interviewer_name: string
+          scheduled_at: string
+          duration_minutes: number
+          format: string
+          job_role: string
+          status: string
+          feedback_submitted?: string
+          resume_url?: string | null
+          use_question_bank?: boolean
+          created_at?: string
         }
         Update: {
-          interview_id?: string
-          application_id?: string
-          interviewer_id?: string
-          round_number?: number
-          interview_date_time?: string
-          interview_status?: string
+          id?: string
+          candidate_name?: string
+          interviewer_name?: string
+          scheduled_at?: string
+          duration_minutes?: number
+          format?: string
+          job_role?: string
+          status?: string
+          feedback_submitted?: string
+          resume_url?: string | null
+          use_question_bank?: boolean
+          created_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "interviews_application_id_fkey"
-            columns: ["application_id"]
-            referencedRelation: "applications"
-            referencedColumns: ["application_id"]
-          },
-          {
-            foreignKeyName: "interviews_interviewer_id_fkey"
-            columns: ["interviewer_id"]
-            referencedRelation: "users"
-            referencedColumns: ["user_id"]
-          }
-        ]
+        Relationships: []
       }
     }
     Views: {

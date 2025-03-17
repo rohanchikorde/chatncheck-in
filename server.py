@@ -1,838 +1,469 @@
 
 from flask import Flask, request, jsonify, make_response
-import csv
+from flask_cors import CORS
 import os
 import json
 from datetime import datetime
-from flask_cors import CORS
+import requests
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
 
-# Define CSV files for different data types
-INTERVIEWS_FILE = 'interviews.csv'
-USERS_FILE = 'users.csv'
-FEEDBACK_FILE = 'feedback.csv'
+# Supabase configuration
+SUPABASE_URL = os.getenv('SUPABASE_URL', 'https://ehcobpmrrtdkebphqaui.supabase.co')
+SUPABASE_KEY = os.getenv('SUPABASE_KEY', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVoY29icG1ycnRka2VicGhxYXVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDc3MjAyNzAsImV4cCI6MjAyMzI5NjI3MH0.Wx6H98f00YP2XAXaPJTAARNbxn6xmr25aPpw1IVZcW0')
+STORAGE_BUCKET = 'interview-documents'
 
-# Define headers for each CSV file
-INTERVIEW_HEADERS = ['id', 'candidate_name', 'interviewer_name', 'scheduled_at', 'status', 
-                    'feedback_submitted', 'job_role', 'format', 'duration']
-USER_HEADERS = ['id', 'name', 'email', 'role', 'status', 'last_active']
-FEEDBACK_HEADERS = ['id', 'interview_id', 'rating', 'comments', 'submitted_by', 'submitted_at',
-                   'problem_solving', 'communication']
-
-# Helper function to read CSV file
-def read_csv(file_path, headers):
-    if not os.path.exists(file_path):
-        # Create the file with headers if it doesn't exist
-        initialize_csv(file_path, headers)
-        return []
+# Helper function to make requests to Supabase
+def supabase_request(endpoint, method='GET', data=None, headers=None, files=None):
+    if headers is None:
+        headers = {}
+    
+    # Add Supabase headers
+    headers.update({
+        'apikey': SUPABASE_KEY,
+        'Authorization': f'Bearer {SUPABASE_KEY}'
+    })
+    
+    url = f"{SUPABASE_URL}{endpoint}"
     
     try:
-        with open(file_path, 'r', newline='', encoding='utf-8') as file:
-            reader = csv.DictReader(file)
-            return list(reader)
-    except Exception as e:
-        app.logger.error(f"Error reading CSV file {file_path}: {str(e)}")
-        raise Exception(f"CSV error, check file {file_path}")
-
-# Helper function to write to CSV file
-def write_csv(file_path, data, headers):
-    try:
-        with open(file_path, 'w', newline='', encoding='utf-8') as file:
-            writer = csv.DictWriter(file, fieldnames=headers)
-            writer.writeheader()
-            writer.writerows(data)
-    except Exception as e:
-        app.logger.error(f"Error writing to CSV file {file_path}: {str(e)}")
-        raise Exception(f"CSV error, check file {file_path}")
-
-# Initialize CSV file with headers
-def initialize_csv(file_path, headers):
-    if not os.path.exists(file_path):
-        try:
-            with open(file_path, 'w', newline='', encoding='utf-8') as file:
-                writer = csv.DictWriter(file, fieldnames=headers)
-                writer.writeheader()
-            print(f"Initialized {file_path} with headers")
-        except Exception as e:
-            app.logger.error(f"Error initializing CSV file {file_path}: {str(e)}")
-            raise Exception(f"CSV initialization error for {file_path}")
-
-# Validate ISO date format
-def validate_date(date_string):
-    try:
-        datetime.fromisoformat(date_string.replace('Z', '+00:00'))
-        return True
-    except ValueError:
-        return False
-
-# Generate a new ID for a record
-def generate_id(data):
-    if not data:
-        return "1"
-    max_id = max([int(item.get('id', 0)) for item in data])
-    return str(max_id + 1)
-
-# API Routes for Interviews
-# GET /interviews - Fetch all interviews with optional filtering
-@app.route('/interviews', methods=['GET'])
-def get_interviews():
-    try:
-        interviews = read_csv(INTERVIEWS_FILE, INTERVIEW_HEADERS)
+        if method == 'GET':
+            response = requests.get(url, headers=headers)
+        elif method == 'POST':
+            if files:
+                response = requests.post(url, headers=headers, data=data, files=files)
+            else:
+                headers['Content-Type'] = 'application/json'
+                response = requests.post(url, headers=headers, data=json.dumps(data))
+        elif method == 'PUT':
+            headers['Content-Type'] = 'application/json'
+            response = requests.put(url, headers=headers, data=json.dumps(data))
+        elif method == 'DELETE':
+            response = requests.delete(url, headers=headers)
+        else:
+            return {'error': 'Invalid method'}, 400
         
-        # Apply filters from query parameters
-        status = request.args.get('status')
-        interviewer_name = request.args.get('interviewer_name')
-        date_start = request.args.get('date_start')
-        date_end = request.args.get('date_end')
-        search = request.args.get('search')
-        interview_id = request.args.get('id')
+        # Handle response
+        if response.status_code >= 400:
+            app.logger.error(f"Supabase API error: {response.status_code} - {response.text}")
+            return {'error': f"Supabase API error: {response.status_code}"}, response.status_code
         
-        if interview_id:
-            interviews = [i for i in interviews if i.get('id') == interview_id]
-        
-        if status:
-            interviews = [i for i in interviews if i.get('status') == status]
-        
-        if interviewer_name:
-            interviews = [i for i in interviews if i.get('interviewer_name') == interviewer_name]
-        
-        if date_start:
-            if not validate_date(date_start):
-                return make_response(jsonify({"error": "Invalid date_start format"}), 400)
-            interviews = [i for i in interviews if i.get('scheduled_at') >= date_start]
-        
-        if date_end:
-            if not validate_date(date_end):
-                return make_response(jsonify({"error": "Invalid date_end format"}), 400)
-            interviews = [i for i in interviews if i.get('scheduled_at') <= date_end]
-        
-        if search:
-            interviews = [i for i in interviews if 
-                          search.lower() in i.get('candidate_name', '').lower() or
-                          search.lower() in i.get('interviewer_name', '').lower() or
-                          search.lower() in i.get('job_role', '').lower()]
-        
-        # Sort by scheduled_at (default: ascending)
-        interviews.sort(key=lambda x: x.get('scheduled_at', ''))
-        
-        return jsonify(interviews)
+        return response.json(), response.status_code
     
     except Exception as e:
-        app.logger.error(f"Error in get_interviews: {str(e)}")
-        return make_response(jsonify({"error": str(e)}), 500)
+        app.logger.error(f"Error in Supabase request: {str(e)}")
+        return {'error': str(e)}, 500
 
-# POST /interviews - Create a new interview
-@app.route('/interviews', methods=['POST'])
-def create_interview():
+# Helper function to upload file to Supabase Storage
+def upload_file_to_supabase(file, candidate_name):
     try:
-        data = request.get_json()
+        # Create a unique file name
+        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+        file_ext = file.filename.split('.')[-1]
+        file_name = f"{candidate_name.replace(' ', '_')}_{timestamp}.{file_ext}"
+        file_path = f"resumes/{file_name}"
         
-        # Validate required fields
-        required_fields = ['candidate_name', 'interviewer_name', 'scheduled_at', 'status', 'job_role']
-        for field in required_fields:
-            if field not in data:
-                return make_response(jsonify({"error": f"Missing required field: {field}"}), 400)
+        # Upload to Supabase Storage
+        endpoint = f"/storage/v1/object/{STORAGE_BUCKET}/{file_path}"
         
-        # Validate date format
-        if not validate_date(data['scheduled_at']):
-            return make_response(jsonify({"error": "Invalid scheduled_at format"}), 400)
-        
-        interviews = read_csv(INTERVIEWS_FILE, INTERVIEW_HEADERS)
-        
-        # Generate new ID
-        new_id = generate_id(interviews)
-        
-        # Create new interview
-        new_interview = {
-            'id': new_id,
-            'candidate_name': data['candidate_name'],
-            'interviewer_name': data['interviewer_name'],
-            'scheduled_at': data['scheduled_at'],
-            'status': data['status'],
-            'feedback_submitted': data.get('feedback_submitted', 'No'),
-            'job_role': data['job_role'],
-            'format': data.get('format', ''),
-            'duration': data.get('duration', '')
+        headers = {
+            'Cache-Control': 'max-age=3600'
         }
         
-        interviews.append(new_interview)
-        write_csv(INTERVIEWS_FILE, interviews, INTERVIEW_HEADERS)
+        data = file.read()
+        file.seek(0)  # Reset file pointer
         
-        return jsonify(new_interview), 201
+        response, status_code = supabase_request(
+            endpoint, 
+            method='POST', 
+            headers=headers, 
+            data=data
+        )
+        
+        if status_code >= 400:
+            return None
+        
+        # Get public URL
+        public_url = f"{SUPABASE_URL}/storage/v1/object/public/{STORAGE_BUCKET}/{file_path}"
+        return public_url
+    
+    except Exception as e:
+        app.logger.error(f"Error uploading file: {str(e)}")
+        return None
+
+# Validate date format and check if it's in the future
+def validate_date(date_string):
+    try:
+        date_format = "%Y-%m-%d"
+        date_obj = datetime.strptime(date_string, date_format)
+        current_date = datetime.now()
+        
+        # Set time to midnight for comparison
+        current_date = current_date.replace(hour=0, minute=0, second=0, microsecond=0)
+        date_obj = date_obj.replace(hour=0, minute=0, second=0, microsecond=0)
+        
+        if date_obj < current_date:
+            return False, "Date must be in the future"
+        
+        return True, None
+    
+    except ValueError:
+        return False, "Invalid date format. Use YYYY-MM-DD"
+
+# Validate time format (HH:MM)
+def validate_time(time_string):
+    try:
+        time_format = "%H:%M"
+        datetime.strptime(time_string, time_format)
+        return True, None
+    
+    except ValueError:
+        return False, "Invalid time format. Use HH:MM (24-hour format)"
+
+# API endpoint for creating interviews
+@app.route('/api/interviews', methods=['POST'])
+def create_interview():
+    try:
+        # Check if this is a multipart form (with file upload)
+        if request.content_type and 'multipart/form-data' in request.content_type:
+            form_data = request.form
+            resume_file = request.files.get('resume')
+        else:
+            form_data = request.json
+            resume_file = None
+        
+        # Validate required fields
+        required_fields = ['candidateName', 'interviewer', 'date', 'time', 'duration', 'format', 'jobRole']
+        
+        for field in required_fields:
+            if field not in form_data or not form_data[field]:
+                return jsonify({
+                    'success': False,
+                    'error': f"Missing required field: {field}"
+                }), 400
+        
+        # Validate date
+        is_valid_date, date_error = validate_date(form_data['date'])
+        if not is_valid_date:
+            return jsonify({
+                'success': False,
+                'error': date_error
+            }), 400
+        
+        # Validate time
+        is_valid_time, time_error = validate_time(form_data['time'])
+        if not is_valid_time:
+            return jsonify({
+                'success': False,
+                'error': time_error
+            }), 400
+        
+        # Validate duration (convert to integer)
+        try:
+            duration_minutes = int(form_data['duration'])
+            if duration_minutes <= 0:
+                return jsonify({
+                    'success': False,
+                    'error': "Duration must be a positive number"
+                }), 400
+        except ValueError:
+            return jsonify({
+                'success': False,
+                'error': "Duration must be a valid number"
+            }), 400
+        
+        # Handle resume file upload
+        resume_url = None
+        if resume_file:
+            # Validate file type
+            allowed_types = ['application/pdf', 'application/msword', 
+                            'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
+            file_type = resume_file.content_type
+            
+            if file_type not in allowed_types:
+                return jsonify({
+                    'success': False,
+                    'error': "Resume must be a PDF, DOC, or DOCX file"
+                }), 400
+            
+            # Validate file size (max 10MB)
+            max_size = 10 * 1024 * 1024  # 10MB in bytes
+            if resume_file.content_length and resume_file.content_length > max_size:
+                return jsonify({
+                    'success': False,
+                    'error': "Resume file size must not exceed 10MB"
+                }), 400
+            
+            # Upload file to Supabase Storage
+            resume_url = upload_file_to_supabase(resume_file, form_data['candidateName'])
+            
+            if not resume_url:
+                return jsonify({
+                    'success': False,
+                    'error': "Failed to upload resume file"
+                }), 500
+        
+        # Combine date and time
+        scheduled_at = f"{form_data['date']}T{form_data['time']}:00"
+        
+        # Set use_question_bank to boolean
+        use_question_bank = form_data.get('useQuestionBank') in ['true', 'True', True, 1, '1']
+        
+        # Prepare data for Supabase
+        interview_data = {
+            'candidate_name': form_data['candidateName'],
+            'interviewer_name': form_data['interviewer'],
+            'scheduled_at': scheduled_at,
+            'duration_minutes': duration_minutes,
+            'format': form_data['format'],
+            'job_role': form_data['jobRole'],
+            'status': 'Scheduled',
+            'feedback_submitted': 'No',
+            'use_question_bank': use_question_bank
+        }
+        
+        # Add resume URL if available
+        if resume_url:
+            interview_data['resume_url'] = resume_url
+        
+        # Insert into Supabase
+        response, status_code = supabase_request(
+            '/rest/v1/interviews',
+            method='POST',
+            data=interview_data
+        )
+        
+        if status_code >= 400:
+            return jsonify({
+                'success': False,
+                'error': f"Failed to create interview: {response.get('error', 'Unknown error')}"
+            }), status_code
+        
+        return jsonify({
+            'success': True,
+            'data': response
+        }), 201
     
     except Exception as e:
         app.logger.error(f"Error in create_interview: {str(e)}")
-        return make_response(jsonify({"error": str(e)}), 500)
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
-# GET /interviews/<id> - Get a specific interview
-@app.route('/interviews/<id>', methods=['GET'])
-def get_interview(id):
+# API endpoint for fetching all interviews
+@app.route('/api/interviews', methods=['GET'])
+def get_interviews():
     try:
-        interviews = read_csv(INTERVIEWS_FILE, INTERVIEW_HEADERS)
-        
-        # Find the interview
-        interview = next((i for i in interviews if i['id'] == id), None)
-        
-        if not interview:
-            return make_response(jsonify({"error": "Interview not found"}), 404)
-        
-        return jsonify(interview)
-    
-    except Exception as e:
-        app.logger.error(f"Error in get_interview: {str(e)}")
-        return make_response(jsonify({"error": str(e)}), 500)
-
-# PUT /interviews/<id> - Edit an interview
-@app.route('/interviews/<id>', methods=['PUT'])
-def update_interview(id):
-    try:
-        data = request.get_json()
-        
-        # Validate required fields
-        required_fields = ['candidate_name', 'interviewer_name', 'scheduled_at', 'status', 'job_role']
-        for field in required_fields:
-            if field not in data:
-                return make_response(jsonify({"error": f"Missing required field: {field}"}), 400)
-        
-        # Validate date format
-        if not validate_date(data['scheduled_at']):
-            return make_response(jsonify({"error": "Invalid scheduled_at format"}), 400)
-        
-        interviews = read_csv(INTERVIEWS_FILE, INTERVIEW_HEADERS)
-        
-        # Find the interview to update
-        interview = next((i for i in interviews if i['id'] == id), None)
-        
-        if not interview:
-            return make_response(jsonify({"error": "Interview not found"}), 404)
-            
-        # Update fields
-        interview['candidate_name'] = data['candidate_name']
-        interview['interviewer_name'] = data['interviewer_name']
-        interview['scheduled_at'] = data['scheduled_at']
-        interview['status'] = data['status']
-        interview['job_role'] = data['job_role']
-        
-        # Optionally update feedback if provided
-        if 'feedback_submitted' in data:
-            interview['feedback_submitted'] = data['feedback_submitted']
-        
-        # Update optional fields if provided
-        if 'format' in data:
-            interview['format'] = data['format']
-        if 'duration' in data:
-            interview['duration'] = data['duration']
-        
-        write_csv(INTERVIEWS_FILE, interviews, INTERVIEW_HEADERS)
-        return jsonify(interview)
-    
-    except Exception as e:
-        app.logger.error(f"Error in update_interview: {str(e)}")
-        return make_response(jsonify({"error": str(e)}), 500)
-
-# DELETE /interviews/<id> - Delete an interview
-@app.route('/interviews/<id>', methods=['DELETE'])
-def delete_interview(id):
-    try:
-        interviews = read_csv(INTERVIEWS_FILE, INTERVIEW_HEADERS)
-        
-        # Find the interview to delete
-        initial_length = len(interviews)
-        interviews = [i for i in interviews if i['id'] != id]
-        
-        if len(interviews) == initial_length:
-            return make_response(jsonify({"error": "Interview not found"}), 404)
-        
-        write_csv(INTERVIEWS_FILE, interviews, INTERVIEW_HEADERS)
-        return jsonify({"message": "Interview deleted successfully"})
-    
-    except Exception as e:
-        app.logger.error(f"Error in delete_interview: {str(e)}")
-        return make_response(jsonify({"error": str(e)}), 500)
-
-# API Routes for Users
-# GET /users - Fetch all users with optional filtering
-@app.route('/users', methods=['GET'])
-def get_users():
-    try:
-        users = read_csv(USERS_FILE, USER_HEADERS)
-        
-        # Apply filters from query parameters
-        role = request.args.get('role')
+        # Get query parameters
         status = request.args.get('status')
-        search = request.args.get('search')
-        user_id = request.args.get('id')
-        
-        if user_id:
-            users = [u for u in users if u.get('id') == user_id]
-        
-        if role:
-            users = [u for u in users if u.get('role') == role]
-        
-        if status:
-            users = [u for u in users if u.get('status') == status]
-        
-        if search:
-            users = [u for u in users if 
-                    search.lower() in u.get('name', '').lower() or
-                    search.lower() in u.get('email', '').lower()]
-        
-        return jsonify(users)
-    
-    except Exception as e:
-        app.logger.error(f"Error in get_users: {str(e)}")
-        return make_response(jsonify({"error": str(e)}), 500)
-
-# POST /users - Create a new user
-@app.route('/users', methods=['POST'])
-def create_user():
-    try:
-        data = request.get_json()
-        
-        # Validate required fields
-        required_fields = ['name', 'email', 'role']
-        for field in required_fields:
-            if field not in data:
-                return make_response(jsonify({"error": f"Missing required field: {field}"}), 400)
-        
-        users = read_csv(USERS_FILE, USER_HEADERS)
-        
-        # Check if email already exists
-        if any(u.get('email') == data['email'] for u in users):
-            return make_response(jsonify({"error": "Email already exists"}), 400)
-        
-        # Generate new ID
-        new_id = generate_id(users)
-        
-        # Get current time for last_active
-        now = datetime.now().isoformat()
-        
-        # Create new user
-        new_user = {
-            'id': new_id,
-            'name': data['name'],
-            'email': data['email'],
-            'role': data['role'],
-            'status': data.get('status', 'Active'),
-            'last_active': now
-        }
-        
-        users.append(new_user)
-        write_csv(USERS_FILE, users, USER_HEADERS)
-        
-        return jsonify(new_user), 201
-    
-    except Exception as e:
-        app.logger.error(f"Error in create_user: {str(e)}")
-        return make_response(jsonify({"error": str(e)}), 500)
-
-# PUT /users/<id> - Update a user
-@app.route('/users/<id>', methods=['PUT'])
-def update_user(id):
-    try:
-        data = request.get_json()
-        
-        # Validate required fields
-        required_fields = ['name', 'email', 'role', 'status']
-        for field in required_fields:
-            if field not in data:
-                return make_response(jsonify({"error": f"Missing required field: {field}"}), 400)
-        
-        users = read_csv(USERS_FILE, USER_HEADERS)
-        
-        # Find the user to update
-        user = next((u for u in users if u['id'] == id), None)
-        
-        if not user:
-            return make_response(jsonify({"error": "User not found"}), 404)
-        
-        # Check if email already exists for a different user
-        if data['email'] != user['email'] and any(u.get('email') == data['email'] for u in users if u['id'] != id):
-            return make_response(jsonify({"error": "Email already exists"}), 400)
-        
-        # Update fields
-        user['name'] = data['name']
-        user['email'] = data['email']
-        user['role'] = data['role']
-        user['status'] = data['status']
-        
-        write_csv(USERS_FILE, users, USER_HEADERS)
-        return jsonify(user)
-    
-    except Exception as e:
-        app.logger.error(f"Error in update_user: {str(e)}")
-        return make_response(jsonify({"error": str(e)}), 500)
-
-# DELETE /users/<id> - Delete a user
-@app.route('/users/<id>', methods=['DELETE'])
-def delete_user(id):
-    try:
-        users = read_csv(USERS_FILE, USER_HEADERS)
-        
-        # Find the user to delete
-        initial_length = len(users)
-        users = [u for u in users if u['id'] != id]
-        
-        if len(users) == initial_length:
-            return make_response(jsonify({"error": "User not found"}), 404)
-        
-        write_csv(USERS_FILE, users, USER_HEADERS)
-        return jsonify({"message": "User deleted successfully"})
-    
-    except Exception as e:
-        app.logger.error(f"Error in delete_user: {str(e)}")
-        return make_response(jsonify({"error": str(e)}), 500)
-
-# API Routes for Feedback
-# GET /feedback - Fetch all feedback with optional filtering
-@app.route('/feedback', methods=['GET'])
-def get_feedback():
-    try:
-        feedback = read_csv(FEEDBACK_FILE, FEEDBACK_HEADERS)
-        
-        # Apply filters from query parameters
-        interview_id = request.args.get('interview_id')
-        
-        if interview_id:
-            feedback = [f for f in feedback if f.get('interview_id') == interview_id]
-        
-        return jsonify(feedback)
-    
-    except Exception as e:
-        app.logger.error(f"Error in get_feedback: {str(e)}")
-        return make_response(jsonify({"error": str(e)}), 500)
-
-# POST /feedback - Create new feedback for an interview
-@app.route('/feedback', methods=['POST'])
-def create_feedback():
-    try:
-        data = request.get_json()
-        
-        # Validate required fields
-        required_fields = ['interview_id', 'comments', 'submitted_by', 'problem_solving', 'communication']
-        for field in required_fields:
-            if field not in data:
-                return make_response(jsonify({"error": f"Missing required field: {field}"}), 400)
-        
-        # Validate interview exists
-        interviews = read_csv(INTERVIEWS_FILE, INTERVIEW_HEADERS)
-        interview = next((i for i in interviews if i['id'] == data['interview_id']), None)
-        
-        if not interview:
-            return make_response(jsonify({"error": "Interview not found"}), 404)
-        
-        # Read feedback data
-        feedback_entries = read_csv(FEEDBACK_FILE, FEEDBACK_HEADERS)
-        
-        # Check if feedback already exists for this interview
-        if any(f.get('interview_id') == data['interview_id'] for f in feedback_entries):
-            return make_response(jsonify({"error": "Feedback already exists for this interview"}), 400)
-        
-        # Generate new ID
-        new_id = generate_id(feedback_entries)
-        
-        # Get current time
-        now = datetime.now().isoformat()
-        
-        # Create new feedback
-        new_feedback = {
-            'id': new_id,
-            'interview_id': data['interview_id'],
-            'rating': data.get('rating', ''),
-            'comments': data['comments'],
-            'submitted_by': data['submitted_by'],
-            'submitted_at': now,
-            'problem_solving': str(data['problem_solving']),
-            'communication': str(data['communication'])
-        }
-        
-        feedback_entries.append(new_feedback)
-        write_csv(FEEDBACK_FILE, feedback_entries, FEEDBACK_HEADERS)
-        
-        # Update interview to mark feedback as submitted
-        interview['feedback_submitted'] = 'Yes'
-        write_csv(INTERVIEWS_FILE, interviews, INTERVIEW_HEADERS)
-        
-        return jsonify(new_feedback), 201
-    
-    except Exception as e:
-        app.logger.error(f"Error in create_feedback: {str(e)}")
-        return make_response(jsonify({"error": str(e)}), 500)
-
-# API Routes for Interviewer
-# GET /interviewer/interviews - Fetch interviews for a specific interviewer
-@app.route('/interviewer/interviews', methods=['GET'])
-def get_interviewer_interviews():
-    try:
-        interviewer_name = request.args.get('interviewer_name', 'Isha Gupta')  # Default for demo
-        status = request.args.get('status')
+        interviewer = request.args.get('interviewer')
         date_start = request.args.get('date_start')
         date_end = request.args.get('date_end')
         
-        interviews = read_csv(INTERVIEWS_FILE, INTERVIEW_HEADERS)
+        # Build query
+        endpoint = '/rest/v1/interviews?select=*'
         
-        # Filter by interviewer
-        interviews = [i for i in interviews if i.get('interviewer_name') == interviewer_name]
-        
-        # Apply additional filters
         if status:
-            interviews = [i for i in interviews if i.get('status') == status]
+            endpoint += f"&status=eq.{status}"
+        
+        if interviewer:
+            endpoint += f"&interviewer_name=eq.{interviewer}"
         
         if date_start:
-            if not validate_date(date_start):
-                return make_response(jsonify({"error": "Invalid date_start format"}), 400)
-            interviews = [i for i in interviews if i.get('scheduled_at') >= date_start]
+            endpoint += f"&scheduled_at=gte.{date_start}"
         
         if date_end:
-            if not validate_date(date_end):
-                return make_response(jsonify({"error": "Invalid date_end format"}), 400)
-            interviews = [i for i in interviews if i.get('scheduled_at') <= date_end]
+            endpoint += f"&scheduled_at=lte.{date_end}"
         
-        # Sort by date
-        interviews.sort(key=lambda x: x.get('scheduled_at', ''))
+        # Order by scheduled_at
+        endpoint += "&order=scheduled_at.asc"
         
-        return jsonify(interviews)
+        # Make Supabase request
+        response, status_code = supabase_request(endpoint)
+        
+        if status_code >= 400:
+            return jsonify({
+                'success': False,
+                'error': f"Failed to fetch interviews: {response.get('error', 'Unknown error')}"
+            }), status_code
+        
+        return jsonify({
+            'success': True,
+            'data': response
+        })
     
     except Exception as e:
-        app.logger.error(f"Error in get_interviewer_interviews: {str(e)}")
-        return make_response(jsonify({"error": str(e)}), 500)
+        app.logger.error(f"Error in get_interviews: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
-# POST /interviewer/interviews/<id>/feedback - Submit feedback for an interview
-@app.route('/interviewer/interviews/<id>/feedback', methods=['POST'])
-def submit_interviewer_feedback(id):
+# API endpoint for fetching a specific interview
+@app.route('/api/interviews/<id>', methods=['GET'])
+def get_interview(id):
     try:
-        data = request.get_json()
-        interviewer_name = data.get('submitted_by', 'Isha Gupta')  # Default for demo
+        endpoint = f"/rest/v1/interviews?id=eq.{id}&select=*"
+        
+        response, status_code = supabase_request(endpoint)
+        
+        if status_code >= 400:
+            return jsonify({
+                'success': False,
+                'error': f"Failed to fetch interview: {response.get('error', 'Unknown error')}"
+            }), status_code
+        
+        if not response or len(response) == 0:
+            return jsonify({
+                'success': False,
+                'error': "Interview not found"
+            }), 404
+        
+        return jsonify({
+            'success': True,
+            'data': response[0]
+        })
+    
+    except Exception as e:
+        app.logger.error(f"Error in get_interview: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+# API endpoint for updating an interview
+@app.route('/api/interviews/<id>', methods=['PUT'])
+def update_interview(id):
+    try:
+        data = request.json
         
         # Validate required fields
-        required_fields = ['problem_solving', 'communication', 'comments']
+        required_fields = ['candidateName', 'interviewer', 'date', 'time', 'duration', 'format', 'jobRole']
+        
         for field in required_fields:
-            if field not in data:
-                return make_response(jsonify({"error": f"Missing required field: {field}"}), 400)
+            if field not in data or not data[field]:
+                return jsonify({
+                    'success': False,
+                    'error': f"Missing required field: {field}"
+                }), 400
         
-        # Check if interview exists and is completed
-        interviews = read_csv(INTERVIEWS_FILE, INTERVIEW_HEADERS)
-        interview = next((i for i in interviews if i['id'] == id), None)
+        # Validate date and time
+        is_valid_date, date_error = validate_date(data['date'])
+        if not is_valid_date:
+            return jsonify({
+                'success': False,
+                'error': date_error
+            }), 400
         
-        if not interview:
-            return make_response(jsonify({"error": "Interview not found"}), 404)
+        is_valid_time, time_error = validate_time(data['time'])
+        if not is_valid_time:
+            return jsonify({
+                'success': False,
+                'error': time_error
+            }), 400
         
-        if interview.get('status') != 'Completed':
-            return make_response(jsonify({"error": "Cannot submit feedback for an interview that is not completed"}), 400)
+        # Combine date and time
+        scheduled_at = f"{data['date']}T{data['time']}:00"
         
-        if interview.get('feedback_submitted') == 'Yes':
-            return make_response(jsonify({"error": "Feedback already submitted for this interview"}), 400)
-        
-        # Update interview to mark feedback as submitted
-        interview['feedback_submitted'] = 'Yes'
-        write_csv(INTERVIEWS_FILE, interviews, INTERVIEW_HEADERS)
-        
-        # Create new feedback entry
-        feedback_data = {
-            'interview_id': id,
-            'problem_solving': data['problem_solving'],
-            'communication': data['communication'],
-            'comments': data['comments'],
-            'submitted_by': interviewer_name
+        # Prepare update data
+        update_data = {
+            'candidate_name': data['candidateName'],
+            'interviewer_name': data['interviewer'],
+            'scheduled_at': scheduled_at,
+            'duration_minutes': int(data['duration']),
+            'format': data['format'],
+            'job_role': data['jobRole']
         }
         
-        # Add to feedback CSV
-        feedback_entries = read_csv(FEEDBACK_FILE, FEEDBACK_HEADERS)
-        new_id = generate_id(feedback_entries)
-        now = datetime.now().isoformat()
+        # Update optional fields
+        if 'status' in data:
+            update_data['status'] = data['status']
         
-        new_feedback = {
-            'id': new_id,
-            'interview_id': id,
-            'rating': '',  # Legacy field, using separate scores now
-            'comments': data['comments'],
-            'submitted_by': interviewer_name,
-            'submitted_at': now,
-            'problem_solving': str(data['problem_solving']),
-            'communication': str(data['communication'])
-        }
+        if 'feedbackSubmitted' in data:
+            update_data['feedback_submitted'] = data['feedbackSubmitted']
         
-        feedback_entries.append(new_feedback)
-        write_csv(FEEDBACK_FILE, feedback_entries, FEEDBACK_HEADERS)
+        if 'useQuestionBank' in data:
+            update_data['use_question_bank'] = data['useQuestionBank']
         
-        return jsonify({"message": "Feedback submitted successfully"}), 201
+        # Make Supabase request
+        endpoint = f"/rest/v1/interviews?id=eq.{id}"
+        response, status_code = supabase_request(endpoint, method='PUT', data=update_data)
+        
+        if status_code >= 400:
+            return jsonify({
+                'success': False,
+                'error': f"Failed to update interview: {response.get('error', 'Unknown error')}"
+            }), status_code
+        
+        # Fetch the updated interview
+        get_endpoint = f"/rest/v1/interviews?id=eq.{id}&select=*"
+        get_response, get_status_code = supabase_request(get_endpoint)
+        
+        if get_status_code >= 400 or not get_response or len(get_response) == 0:
+            return jsonify({
+                'success': True,
+                'message': "Interview updated but unable to retrieve the updated data"
+            })
+        
+        return jsonify({
+            'success': True,
+            'data': get_response[0]
+        })
     
     except Exception as e:
-        app.logger.error(f"Error in submit_interviewer_feedback: {str(e)}")
-        return make_response(jsonify({"error": str(e)}), 500)
+        app.logger.error(f"Error in update_interview: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
-# GET /interviewer/feedback - Get feedback submitted by an interviewer
-@app.route('/interviewer/feedback', methods=['GET'])
-def get_interviewer_feedback():
+# API endpoint for deleting an interview
+@app.route('/api/interviews/<id>', methods=['DELETE'])
+def delete_interview(id):
     try:
-        interviewer_name = request.args.get('interviewer_name', 'Isha Gupta')  # Default for demo
+        # Check if interview exists
+        get_endpoint = f"/rest/v1/interviews?id=eq.{id}&select=id"
+        get_response, get_status_code = supabase_request(get_endpoint)
         
-        feedback_entries = read_csv(FEEDBACK_FILE, FEEDBACK_HEADERS)
+        if get_status_code >= 400:
+            return jsonify({
+                'success': False,
+                'error': f"Failed to check if interview exists: {get_response.get('error', 'Unknown error')}"
+            }), get_status_code
         
-        # Filter by interviewer
-        feedback_entries = [f for f in feedback_entries if f.get('submitted_by') == interviewer_name]
+        if not get_response or len(get_response) == 0:
+            return jsonify({
+                'success': False,
+                'error': "Interview not found"
+            }), 404
         
-        # Sort by submission date (newest first)
-        feedback_entries.sort(key=lambda x: x.get('submitted_at', ''), reverse=True)
+        # Delete the interview
+        endpoint = f"/rest/v1/interviews?id=eq.{id}"
+        response, status_code = supabase_request(endpoint, method='DELETE')
         
-        # Enhance feedback data with candidate and job role
-        interviews = read_csv(INTERVIEWS_FILE, INTERVIEW_HEADERS)
+        if status_code >= 400:
+            return jsonify({
+                'success': False,
+                'error': f"Failed to delete interview: {response.get('error', 'Unknown error')}"
+            }), status_code
         
-        enhanced_feedback = []
-        for feedback in feedback_entries:
-            interview = next((i for i in interviews if i['id'] == feedback['interview_id']), None)
-            if interview:
-                enhanced_entry = feedback.copy()
-                enhanced_entry['candidate_name'] = interview.get('candidate_name', '')
-                enhanced_entry['job_role'] = interview.get('job_role', '')
-                enhanced_entry['interview_date'] = interview.get('scheduled_at', '')
-                enhanced_feedback.append(enhanced_entry)
-        
-        return jsonify(enhanced_feedback)
+        return jsonify({
+            'success': True,
+            'message': "Interview deleted successfully"
+        })
     
     except Exception as e:
-        app.logger.error(f"Error in get_interviewer_feedback: {str(e)}")
-        return make_response(jsonify({"error": str(e)}), 500)
-
-# API Routes for Interviewee
-# GET /interviewee/interviews - Fetch interviews for a specific candidate
-@app.route('/interviewee/interviews', methods=['GET'])
-def get_interviewee_interviews():
-    try:
-        candidate_name = request.args.get('candidate_name', 'Sam Patel')  # Default for demo
-        
-        interviews = read_csv(INTERVIEWS_FILE, INTERVIEW_HEADERS)
-        
-        # Filter by candidate
-        interviews = [i for i in interviews if i.get('candidate_name') == candidate_name]
-        
-        # Sort by date
-        interviews.sort(key=lambda x: x.get('scheduled_at', ''))
-        
-        # Add feedback status info
-        feedback_entries = read_csv(FEEDBACK_FILE, FEEDBACK_HEADERS)
-        
-        for interview in interviews:
-            feedback = next((f for f in feedback_entries if f.get('interview_id') == interview['id']), None)
-            
-            if feedback and interview['status'] == 'Completed':
-                # For demo purposes, just mark as "Under Review"
-                # In a real app, we'd have a more complex feedback status system
-                interview['feedback_status'] = 'Under Review'
-            elif interview['status'] == 'Completed' and not feedback:
-                interview['feedback_status'] = 'Pending'
-        
-        return jsonify(interviews)
-    
-    except Exception as e:
-        app.logger.error(f"Error in get_interviewee_interviews: {str(e)}")
-        return make_response(jsonify({"error": str(e)}), 500)
-
-# GET /interviewee/interviews/<id>/join - Join an interview (update status to In Progress)
-@app.route('/interviewee/interviews/<id>/join', methods=['GET'])
-def join_interview(id):
-    try:
-        interviews = read_csv(INTERVIEWS_FILE, INTERVIEW_HEADERS)
-        
-        # Find the interview
-        interview = next((i for i in interviews if i['id'] == id), None)
-        
-        if not interview:
-            return make_response(jsonify({"error": "Interview not found"}), 404)
-        
-        # Check if interview is scheduled
-        if interview['status'] != 'Scheduled':
-            return make_response(jsonify({"error": "Interview is not in Scheduled status"}), 400)
-        
-        # Check if within time window (15 mins before to 1 hour after)
-        interview_time = datetime.fromisoformat(interview['scheduled_at'].replace('Z', '+00:00'))
-        now = datetime.now().replace(tzinfo=None)
-        time_diff = (interview_time.replace(tzinfo=None) - now).total_seconds() / 60
-        
-        if time_diff > 15:
-            return make_response(jsonify({"error": "Interview not ready yet, please join 15 minutes before the scheduled time"}), 403)
-        
-        if time_diff < -60:
-            return make_response(jsonify({"error": "Interview time has passed"}), 403)
-        
-        # Update status to In Progress
-        interview['status'] = 'In Progress'
-        write_csv(INTERVIEWS_FILE, interviews, INTERVIEW_HEADERS)
-        
-        # Return mock join URL
-        return jsonify({"join_url": f"https://video-call/{id}", "message": "Interview joined successfully"})
-    
-    except Exception as e:
-        app.logger.error(f"Error in join_interview: {str(e)}")
-        return make_response(jsonify({"error": str(e)}), 500)
-
-# GET /statistics - Get statistics for dashboard
-@app.route('/statistics', methods=['GET'])
-def get_statistics():
-    try:
-        interviews = read_csv(INTERVIEWS_FILE, INTERVIEW_HEADERS)
-        users = read_csv(USERS_FILE, USER_HEADERS)
-        
-        # Calculate statistics
-        total_interviews = len(interviews)
-        scheduled_interviews = sum(1 for i in interviews if i['status'] == 'Scheduled')
-        completed_interviews = sum(1 for i in interviews if i['status'] == 'Completed')
-        cancelled_interviews = sum(1 for i in interviews if i['status'] == 'Cancelled')
-        
-        # Interview formats
-        formats = {}
-        for interview in interviews:
-            format_type = interview.get('format', 'Unspecified')
-            if format_type:
-                formats[format_type] = formats.get(format_type, 0) + 1
-        
-        # User statistics
-        user_stats = {
-            'total': len(users),
-            'active': sum(1 for u in users if u['status'] == 'Active'),
-            'inactive': sum(1 for u in users if u['status'] == 'Inactive'),
-            'by_role': {}
-        }
-        
-        for user in users:
-            role = user.get('role', 'Unspecified')
-            if role:
-                user_stats['by_role'][role] = user_stats['by_role'].get(role, 0) + 1
-        
-        statistics = {
-            'interviews': {
-                'total': total_interviews,
-                'scheduled': scheduled_interviews,
-                'completed': completed_interviews,
-                'cancelled': cancelled_interviews,
-                'formats': formats
-            },
-            'users': user_stats
-        }
-        
-        return jsonify(statistics)
-    
-    except Exception as e:
-        app.logger.error(f"Error in get_statistics: {str(e)}")
-        return make_response(jsonify({"error": str(e)}), 500)
-
-# Initialize all CSV files on startup
-def initialize_all_csv_files():
-    initialize_csv(INTERVIEWS_FILE, INTERVIEW_HEADERS)
-    initialize_csv(USERS_FILE, USER_HEADERS)
-    initialize_csv(FEEDBACK_FILE, FEEDBACK_HEADERS)
-    
-    # Add sample data if files are empty
-    add_sample_data()
-
-# Add sample data for demonstration (only if files are empty)
-def add_sample_data():
-    # Add sample interviews if none exist
-    interviews = read_csv(INTERVIEWS_FILE, INTERVIEW_HEADERS)
-    if not interviews:
-        sample_interviews = [
-            {
-                'id': '1',
-                'candidate_name': 'Sam Patel',
-                'interviewer_name': 'Isha Gupta',
-                'scheduled_at': '2025-03-15T10:00:00Z',
-                'status': 'Scheduled',
-                'feedback_submitted': 'No',
-                'job_role': 'Frontend Developer',
-                'format': 'technical',
-                'duration': '60'
-            },
-            {
-                'id': '2',
-                'candidate_name': 'Sam Patel',
-                'interviewer_name': 'Alex Johnson',
-                'scheduled_at': '2025-03-18T14:00:00Z',
-                'status': 'Scheduled',
-                'feedback_submitted': 'No',
-                'job_role': 'Frontend Developer',
-                'format': 'behavioral',
-                'duration': '45'
-            },
-            {
-                'id': '3',
-                'candidate_name': 'Sam Patel',
-                'interviewer_name': 'Michael Chen',
-                'scheduled_at': '2025-03-10T11:00:00Z',
-                'status': 'Completed',
-                'feedback_submitted': 'No',
-                'job_role': 'Frontend Developer',
-                'format': 'technical',
-                'duration': '60'
-            },
-            {
-                'id': '4',
-                'candidate_name': 'John Doe',
-                'interviewer_name': 'Isha Gupta',
-                'scheduled_at': '2025-03-16T14:00:00Z',
-                'status': 'Scheduled',
-                'feedback_submitted': 'No',
-                'job_role': 'Backend Developer',
-                'format': 'technical',
-                'duration': '60'
-            },
-            {
-                'id': '5',
-                'candidate_name': 'Maria Garcia',
-                'interviewer_name': 'Isha Gupta',
-                'scheduled_at': '2025-03-10T11:00:00Z',
-                'status': 'Completed',
-                'feedback_submitted': 'No',
-                'job_role': 'UX Designer',
-                'format': 'behavioral',
-                'duration': '45'
-            }
-        ]
-        write_csv(INTERVIEWS_FILE, sample_interviews, INTERVIEW_HEADERS)
-    
-    # Add sample users if none exist
-    users = read_csv(USERS_FILE, USER_HEADERS)
-    if not users:
-        sample_users = [
-            {
-                'id': '1',
-                'name': 'Isha Gupta',
-                'email': 'isha.gupta@example.com',
-                'role': 'Interviewer',
-                'status': 'Active',
-                'last_active': '2025-03-14T09:30:00Z'
-            },
-            {
-                'id': '2',
-                'name': 'Sam Patel',
-                'email': 'sam.patel@example.com',
-                'role': 'Candidate',
-                'status': 'Active',
-                'last_active': '2025-03-14T10:15:00Z'
-            },
-            {
-                'id': '3',
-                'name': 'Alex Johnson',
-                'email': 'alex.johnson@example.com',
-                'role': 'Interviewer',
-                'status': 'Active',
-                'last_active': '2025-03-14T11:45:00Z'
-            },
-            {
-                'id': '4',
-                'name': 'Michael Chen',
-                'email': 'michael.chen@example.com',
-                'role': 'Interviewer',
-                'status': 'Active',
-                'last_active': '2025-03-14T08:30:00Z'
-            }
-        ]
-        write_csv(USERS_FILE, sample_users, USER_HEADERS)
+        app.logger.error(f"Error in delete_interview: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
 if __name__ == '__main__':
-    # Initialize CSV files before starting the server
-    initialize_all_csv_files()
-    
-    # Start the Flask server
     app.run(debug=True, port=5000)
