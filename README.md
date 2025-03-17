@@ -1,87 +1,97 @@
 
-# InterviewSync Backend
+# Interview Platform
 
-A lightweight Python Flask backend for the "InterviewSync" portal's "View All Interviews" page.
+A comprehensive interview management platform for scheduling and conducting interviews.
 
-## Overview
+## Project Structure
 
-This backend provides API endpoints to:
-- Fetch all interviews with filtering options
-- Create new interviews
-- Edit existing interviews
-- Delete interviews
-
-Data is temporarily stored in a CSV file (`interviews.csv`), with plans to transition to a database in the future.
-
-## Setup
-
-1. Install dependencies:
 ```
-pip install -r requirements.txt
-```
-
-2. Run the server:
-```
-python server.py
-```
-
-The server will run on port 5000 by default.
-
-## API Endpoints
-
-### GET /interviews
-Fetch all interviews with optional filtering.
-
-Query parameters:
-- `status`: Filter by interview status (e.g., "Scheduled", "Completed")
-- `interviewer_name`: Filter by interviewer
-- `date_start`: Filter by start date (ISO format)
-- `date_end`: Filter by end date (ISO format)
-- `search`: Search in candidate name, interviewer name, or job role
-
-### POST /interviews
-Create a new interview.
-
-Request body:
-```json
-{
-  "candidate_name": "Sam Patel",
-  "interviewer_name": "Isha Gupta",
-  "scheduled_at": "2025-03-15T10:00:00Z",
-  "status": "Scheduled",
-  "job_role": "Frontend Developer"
-}
+interview-platform/
+├── backend/                 # Backend Flask API
+│   ├── app/                 # Flask application
+│   │   ├── __init__.py      # Flask app initialization
+│   │   ├── routes/          # API routes
+│   │   ├── utils/           # Utility functions
+│   │   ├── config/          # Configuration
+│   │   └── logs/            # Application logs
+│   ├── .env                 # Backend environment variables
+│   └── requirements.txt     # Python dependencies
+├── frontend/                # Frontend React application
+│   ├── src/                 # React source code
+│   ├── .env                 # Frontend environment variables
+│   └── package.json         # Node.js dependencies
+└── supabase/                # Supabase configuration
+    ├── config/              # Supabase client
+    └── types/               # TypeScript types for Supabase
 ```
 
-### PUT /interviews/<id>
-Edit an existing interview.
+## Getting Started
 
-Request body:
-```json
-{
-  "candidate_name": "Sam Patel",
-  "interviewer_name": "Isha Gupta",
-  "scheduled_at": "2025-03-15T11:00:00Z",
-  "status": "Scheduled",
-  "job_role": "Frontend Developer",
-  "feedback_submitted": "No"
-}
-```
+### Backend Setup
 
-### DELETE /interviews/<id>
-Delete an interview.
+1. Navigate to the backend directory:
+   ```
+   cd backend
+   ```
 
-## CSV Structure
+2. Create a virtual environment (optional but recommended):
+   ```
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   ```
 
-The `interviews.csv` file has the following structure:
-- `id`: Unique identifier for the interview
-- `candidate_name`: Name of the candidate
-- `interviewer_name`: Name of the interviewer
-- `scheduled_at`: Date and time of the interview (ISO format)
-- `status`: Status of the interview (e.g., "Scheduled", "Completed")
-- `feedback_submitted`: Whether feedback has been submitted ("Yes" or "No")
-- `job_role`: Role the candidate is interviewing for
+3. Install dependencies:
+   ```
+   pip install -r requirements.txt
+   ```
 
-## Future Plans
+4. Run the Flask application:
+   ```
+   python run.py
+   ```
 
-This backend is designed for easy transition to a database system like PostgreSQL in the future, replacing the CSV storage with database queries.
+The backend server will start on http://localhost:5000.
+
+### Frontend Setup
+
+1. Navigate to the frontend directory:
+   ```
+   cd frontend
+   ```
+
+2. Install dependencies:
+   ```
+   npm install
+   ```
+
+3. Start the development server:
+   ```
+   npm run dev
+   ```
+
+The frontend application will be accessible at http://localhost:5173.
+
+## Features
+
+- Schedule and manage interviews
+- Upload and store candidate resumes
+- Track interview feedback
+- Integration with Supabase for data storage
+- User role-based access control
+
+## Technologies Used
+
+- **Backend**: Flask, Python
+- **Frontend**: React, TypeScript, Vite
+- **Database**: Supabase
+- **Storage**: Supabase Storage
+
+## API Documentation
+
+### Interviews API
+
+- `GET /api/interviews` - Get all interviews
+- `GET /api/interviews/:id` - Get interview by ID
+- `POST /api/interviews` - Create a new interview
+- `PUT /api/interviews/:id` - Update an interview
+- `DELETE /api/interviews/:id` - Delete an interview
