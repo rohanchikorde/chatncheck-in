@@ -1,3 +1,4 @@
+
 import { supabase } from './supabase';
 
 // Companies API
@@ -169,17 +170,19 @@ export const candidatesApi = {
 // Applications API
 export const applicationsApi = {
   async getAll() {
+    // Simplify the nested query to avoid deep type instantiation
     const { data, error } = await supabase
       .from('applications')
-      .select('*, candidates(*), roles(*, companies(*))');
+      .select('*');
     if (error) throw error;
     return data;
   },
   
   async getById(id: string) {
+    // Simplify the nested query to avoid deep type instantiation
     const { data, error } = await supabase
       .from('applications')
-      .select('*, candidates(*), roles(*, companies(*))')
+      .select('*')
       .eq('application_id', id)
       .single();
     if (error) throw error;
@@ -187,9 +190,10 @@ export const applicationsApi = {
   },
   
   async getByCandidate(candidateId: string) {
+    // Simplify the nested query to avoid deep type instantiation
     const { data, error } = await supabase
       .from('applications')
-      .select('*, candidates(*), roles(*, companies(*))')
+      .select('*')
       .eq('candidate_id', candidateId);
     if (error) throw error;
     return data;
