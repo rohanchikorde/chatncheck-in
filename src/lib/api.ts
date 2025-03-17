@@ -1,3 +1,4 @@
+
 import { supabase } from './supabase';
 
 // Companies API
@@ -189,7 +190,7 @@ export const applicationsApi = {
   },
   
   async getByCandidate(candidateId: string) {
-    // Simplify the nested query to avoid deep type instantiation
+    // Fix type instantiation issue by simplifying the query
     const { data, error } = await supabase
       .from('applications')
       .select('*')
@@ -224,6 +225,7 @@ export const applicationsApi = {
 // Interviews API
 export const interviewsApi = {
   async getAll() {
+    // Simplify the query to avoid deeply nested types
     const { data, error } = await supabase
       .from('interviews')
       .select('*');
@@ -232,6 +234,7 @@ export const interviewsApi = {
   },
   
   async getById(id: string) {
+    // Simplify the query to avoid deeply nested types
     const { data, error } = await supabase
       .from('interviews')
       .select('*')
@@ -242,6 +245,7 @@ export const interviewsApi = {
   },
   
   async getByApplication(applicationId: string) {
+    // Simplify the query to avoid deeply nested types
     const { data, error } = await supabase
       .from('interviews')
       .select('*')
@@ -251,6 +255,7 @@ export const interviewsApi = {
   },
   
   async getByInterviewer(interviewerId: string) {
+    // Simplify the query to avoid deeply nested types
     const { data, error } = await supabase
       .from('interviews')
       .select('*')
