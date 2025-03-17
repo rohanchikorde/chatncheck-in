@@ -223,15 +223,7 @@ export const interviewsApi = {
   async getAll() {
     const { data, error } = await supabase
       .from('interviews')
-      .select(`
-        *,
-        applications(
-          *,
-          candidates(*),
-          roles(*, companies(*))
-        ),
-        users(*)
-      `);
+      .select('*');
     if (error) throw error;
     return data;
   },
@@ -239,15 +231,7 @@ export const interviewsApi = {
   async getById(id: string) {
     const { data, error } = await supabase
       .from('interviews')
-      .select(`
-        *,
-        applications(
-          *,
-          candidates(*),
-          roles(*, companies(*))
-        ),
-        users(*)
-      `)
+      .select('*')
       .eq('id', id)
       .single();
     if (error) throw error;
@@ -257,15 +241,7 @@ export const interviewsApi = {
   async getByApplication(applicationId: string) {
     const { data, error } = await supabase
       .from('interviews')
-      .select(`
-        *,
-        applications(
-          *,
-          candidates(*),
-          roles(*, companies(*))
-        ),
-        users(*)
-      `)
+      .select('*')
       .eq('application_id', applicationId);
     if (error) throw error;
     return data;
@@ -274,15 +250,7 @@ export const interviewsApi = {
   async getByInterviewer(interviewerId: string) {
     const { data, error } = await supabase
       .from('interviews')
-      .select(`
-        *,
-        applications(
-          *,
-          candidates(*),
-          roles(*, companies(*))
-        ),
-        users(*)
-      `)
+      .select('*')
       .eq('interviewer_name', interviewerId);
     if (error) throw error;
     return data;
