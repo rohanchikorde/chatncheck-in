@@ -8,6 +8,7 @@ import { ArrowLeft, Calendar, Clock, User, Briefcase, CheckCircle, XCircle } fro
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
+import { supabase } from '@/lib/supabase';
 
 interface Interview {
   id: string;
@@ -18,7 +19,8 @@ interface Interview {
   feedback_submitted: string;
   job_role: string;
   format?: string;
-  duration?: string;
+  duration_minutes?: number;
+  resume_url?: string | null;
 }
 
 export default function InterviewDetailPage() {
@@ -35,22 +37,25 @@ export default function InterviewDetailPage() {
     setError(null);
     
     try {
-      const response = await fetch(`http://localhost:5000/interviews?id=${id}`);
+      if (!id) throw new Error("Interview ID is required");
       
-      if (!response.ok) {
-        throw new Error("Failed to fetch interview details");
+      const { data, error: fetchError } = await supabase
+        .from('interviews')
+        .select('*')
+        .eq('id', id)
+        .single();
+      
+      if (fetchError) {
+        throw new Error(fetchError.message);
       }
       
-      const data = await response.json();
-      // Find the interview with the matching ID
-      const interviewData = data.find((interview: Interview) => interview.id === id);
-      
-      if (!interviewData) {
+      if (!data) {
         throw new Error("Interview not found");
       }
       
-      setInterview(interviewData);
+      setInterview(data as Interview);
     } catch (err) {
+      console.error("Error fetching interview:", err);
       setError("Error loading interview details. Please try again.");
       toast({
         title: "Error",
@@ -231,10 +236,24 @@ export default function InterviewDetailPage() {
                 </div>
               )}
               
-              {interview.duration && (
+              {interview.duration_minutes && (
                 <div className="pt-4 border-t">
                   <h3 className="font-medium mb-2">Duration</h3>
-                  <p>{interview.duration} minutes</p>
+                  <p>{interview.duration_minutes} minutes</p>
+                </div>
+              )}
+
+              {interview.resume_url && (
+                <div className="pt-4 border-t">
+                  <h3 className="font-medium mb-2">Resume</h3>
+                  <a 
+                    href={interview.resume_url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:underline"
+                  >
+                    View Resume
+                  </a>
                 </div>
               )}
             </div>
@@ -268,30 +287,30 @@ export default function InterviewDetailPage() {
             <Button 
               className="w-full" 
               variant="destructive" 
-              onClick={() => {
+              onClick={async () => {
                 // Confirm and navigate back upon successful deletion
                 if (confirm("Are you sure you want to delete this interview?")) {
-                  fetch(`http://localhost:5000/interviews/${interview.id}`, {
-                    method: "DELETE",
-                  })
-                    .then(response => {
-                      if (response.ok) {
-                        toast({
-                          title: "Interview Deleted",
-                          description: "The interview has been successfully deleted.",
-                        });
-                        navigate("/admin/interviews");
-                      } else {
-                        throw new Error("Failed to delete interview");
-                      }
-                    })
-                    .catch(error => {
-                      toast({
-                        title: "Error",
-                        description: "Failed to delete the interview",
-                        variant: "destructive",
-                      });
+                  try {
+                    const { error } = await supabase
+                      .from('interviews')
+                      .delete()
+                      .eq('id', interview.id);
+                      
+                    if (error) throw error;
+                    
+                    toast({
+                      title: "Interview Deleted",
+                      description: "The interview has been successfully deleted.",
                     });
+                    navigate("/admin/interviews");
+                  } catch (error) {
+                    console.error("Error deleting interview:", error);
+                    toast({
+                      title: "Error",
+                      description: "Failed to delete the interview",
+                      variant: "destructive",
+                    });
+                  }
                 }
               }}
             >

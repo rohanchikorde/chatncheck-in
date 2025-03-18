@@ -15,6 +15,7 @@ import {
 import PageHeader from "@/components/shared/PageHeader";
 import { useToast } from "@/hooks/use-toast";
 import CreateInterviewModal from "@/components/admin/CreateInterviewModal";
+import { supabase } from "@/lib/supabase";
 
 // Interviews interface
 interface Interview {
@@ -26,7 +27,7 @@ interface Interview {
   feedback_submitted: string;
   job_role: string;
   format?: string;
-  duration?: string;
+  duration_minutes?: number;
 }
 
 export default function InterviewsPage() {
@@ -48,22 +49,36 @@ export default function InterviewsPage() {
     setLoading(true);
     setError(null);
     
-    // Build query parameters
-    const params = new URLSearchParams();
-    if (statusFilter) params.append("status", statusFilter);
-    if (interviewerFilter) params.append("interviewer_name", interviewerFilter);
-    if (searchQuery) params.append("search", searchQuery);
-    
     try {
-      const response = await fetch(`http://localhost:5000/interviews?${params.toString()}`);
+      let query = supabase
+        .from('interviews')
+        .select('*');
       
-      if (!response.ok) {
-        throw new Error("Failed to fetch interviews");
+      // Apply filters if they exist
+      if (statusFilter) {
+        query = query.eq('status', statusFilter);
       }
       
-      const data = await response.json();
-      setInterviews(data);
+      if (interviewerFilter) {
+        query = query.eq('interviewer_name', interviewerFilter);
+      }
+      
+      if (searchQuery) {
+        query = query.or(`candidate_name.ilike.%${searchQuery}%,job_role.ilike.%${searchQuery}%`);
+      }
+      
+      // Order by scheduled_at
+      query = query.order('scheduled_at', { ascending: true });
+      
+      const { data, error: fetchError } = await query;
+      
+      if (fetchError) {
+        throw new Error(fetchError.message);
+      }
+      
+      setInterviews(data as Interview[]);
     } catch (err) {
+      console.error("Error fetching interviews:", err);
       setError("Error loading interviews. Please try again.");
       toast({
         title: "Error",
@@ -96,12 +111,13 @@ export default function InterviewsPage() {
     }
     
     try {
-      const response = await fetch(`http://localhost:5000/interviews/${id}`, {
-        method: "DELETE",
-      });
+      const { error } = await supabase
+        .from('interviews')
+        .delete()
+        .eq('id', id);
       
-      if (!response.ok) {
-        throw new Error("Failed to delete interview");
+      if (error) {
+        throw new Error(error.message);
       }
       
       toast({
@@ -112,6 +128,7 @@ export default function InterviewsPage() {
       // Refresh interviews
       fetchInterviews();
     } catch (error) {
+      console.error("Error deleting interview:", error);
       toast({
         title: "Error",
         description: "Failed to delete the interview",
@@ -167,7 +184,7 @@ export default function InterviewsPage() {
               <SelectValue placeholder="Filter by status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Statuses</SelectItem>
+              <SelectItem value="all">All Statuses</SelectItem>
               <SelectItem value="Scheduled">Scheduled</SelectItem>
               <SelectItem value="Completed">Completed</SelectItem>
               <SelectItem value="Cancelled">Cancelled</SelectItem>
@@ -181,7 +198,7 @@ export default function InterviewsPage() {
               <SelectValue placeholder="Filter by interviewer" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Interviewers</SelectItem>
+              <SelectItem value="all">All Interviewers</SelectItem>
               <SelectItem value="Isha Patel">Isha Patel</SelectItem>
               <SelectItem value="Michael Chen">Michael Chen</SelectItem>
               <SelectItem value="Alex Rivera">Alex Rivera</SelectItem>
