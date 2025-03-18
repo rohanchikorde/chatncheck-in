@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Outlet, Navigate } from 'react-router-dom';
 import LandingPage from './pages/LandingPage';
 import Auth from './pages/Auth';
@@ -16,6 +16,7 @@ import IntervieweeInterviewsPage from './pages/interviewee/IntervieweeInterviews
 import IntervieweeDashboard from './pages/interviewee/IntervieweeDashboard';
 import NotFound from './pages/NotFound';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { exposeDevelopmentHelpers } from './utils/testUsers';
 
 // Protected route wrapper for routes that require authentication
 const ProtectedRoute = ({ requiredRole, children }: { requiredRole?: string, children: JSX.Element }) => {
@@ -47,6 +48,11 @@ const ProtectedRoute = ({ requiredRole, children }: { requiredRole?: string, chi
 };
 
 const AppRoutes = () => {
+  useEffect(() => {
+    // Expose development helpers in development mode
+    exposeDevelopmentHelpers();
+  }, []);
+
   return (
     <Routes>
       <Route path="/" element={<LandingPage />} />

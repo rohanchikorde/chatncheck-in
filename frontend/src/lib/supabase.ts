@@ -17,40 +17,6 @@ export type Profile = {
   avatar_url: string | null;
 };
 
-// Function to handle file uploads to Supabase Storage
-export const uploadResume = async (file: File, candidateName: string): Promise<string | null> => {
-  try {
-    // Create a unique file name using candidate name and timestamp
-    const timestamp = new Date().getTime();
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${candidateName.replace(/\s+/g, '_')}_${timestamp}.${fileExt}`;
-    const filePath = `resumes/${fileName}`;
-    
-    // Upload file to Supabase Storage
-    const { data, error } = await supabase.storage
-      .from('interview-documents')
-      .upload(filePath, file, {
-        cacheControl: '3600',
-        upsert: false
-      });
-    
-    if (error) {
-      console.error('Error uploading resume:', error);
-      return null;
-    }
-    
-    // Return the public URL for the file
-    const { data: urlData } = supabase.storage
-      .from('interview-documents')
-      .getPublicUrl(filePath);
-      
-    return urlData.publicUrl;
-  } catch (error) {
-    console.error('Error in upload process:', error);
-    return null;
-  }
-};
-
 // Get user profile
 export const getProfile = async (): Promise<Profile | null> => {
   try {
@@ -104,5 +70,41 @@ export const updateProfile = async (profile: Partial<Profile>): Promise<Profile 
   } catch (error) {
     console.error('Error in updateProfile:', error);
     return null;
+  }
+};
+
+// Function to create test users for development
+export const createTestUsers = async () => {
+  try {
+    // Test interviewer
+    await supabase.auth.signUp({
+      email: 'interviewer@test.com',
+      password: 'password123',
+      options: {
+        data: {
+          role: 'interviewer',
+          full_name: 'Test Interviewer',
+          username: 'testinterviewer'
+        }
+      }
+    });
+    
+    // Test interviewee
+    await supabase.auth.signUp({
+      email: 'interviewee@test.com',
+      password: 'password123',
+      options: {
+        data: {
+          role: 'interviewee',
+          full_name: 'Test Interviewee',
+          username: 'testinterviewee'
+        }
+      }
+    });
+    
+    return true;
+  } catch (error) {
+    console.error('Error creating test users:', error);
+    return false;
   }
 };
