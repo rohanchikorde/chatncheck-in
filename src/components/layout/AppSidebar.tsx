@@ -14,33 +14,35 @@ import {
   SidebarTrigger,
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
-import { Calendar, LayoutDashboard, MessageSquare, Settings, Users } from 'lucide-react';
-import { useState } from 'react';
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Calendar, LayoutDashboard, MessageSquare, Settings, Users, LogOut, User } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function AppSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
-  const [role, setRole] = useState<'admin' | 'interviewer' | 'interviewee'>('admin');
+  const { profile, signOut } = useAuth();
+  
+  const role = profile?.role || 'admin';
 
   const adminMenuItems = [
     { title: 'Dashboard', path: '/admin', icon: LayoutDashboard },
     { title: 'Interviews', path: '/admin/interviews', icon: Calendar },
     { title: 'Users', path: '/admin/users', icon: Users },
-    { title: 'Settings', path: '/admin/settings', icon: Settings },
+    { title: 'Profile', path: '/admin/profile', icon: User },
   ];
 
   const interviewerMenuItems = [
     { title: 'Dashboard', path: '/interviewer', icon: LayoutDashboard },
     { title: 'My Interviews', path: '/interviewer/interviews', icon: Calendar },
     { title: 'Feedback', path: '/interviewer/feedback', icon: MessageSquare },
-    { title: 'Settings', path: '/interviewer/settings', icon: Settings },
+    { title: 'Profile', path: '/interviewer/profile', icon: User },
   ];
 
   const intervieweeMenuItems = [
     { title: 'Dashboard', path: '/interviewee', icon: LayoutDashboard },
     { title: 'My Interviews', path: '/interviewee/interviews', icon: Calendar },
-    { title: 'Feedback', path: '/interviewee/feedback', icon: MessageSquare },
-    { title: 'Settings', path: '/interviewee/settings', icon: Settings },
+    { title: 'Profile', path: '/interviewee/profile', icon: User },
   ];
 
   const getMenuItems = () => {
@@ -58,21 +60,21 @@ export default function AppSidebar() {
 
   const menuItems = getMenuItems();
 
-  const handleRoleChange = (newRole: 'admin' | 'interviewer' | 'interviewee') => {
-    setRole(newRole);
-    
-    // Navigate to the appropriate dashboard
-    switch (newRole) {
-      case 'admin':
-        navigate('/admin');
-        break;
-      case 'interviewer':
-        navigate('/interviewer');
-        break;
-      case 'interviewee':
-        navigate('/interviewee');
-        break;
+  // Get initials for avatar fallback
+  const getInitials = () => {
+    if (profile?.full_name) {
+      return profile.full_name
+        .split(' ')
+        .map(name => name[0])
+        .join('')
+        .toUpperCase();
     }
+    return role[0].toUpperCase();
+  };
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate('/');
   };
 
   return (
@@ -88,33 +90,14 @@ export default function AppSidebar() {
           <SidebarTrigger />
         </div>
 
-        <div className="flex flex-col gap-1.5">
-          <p className="text-xs text-muted-foreground mb-1">Switch Role</p>
-          <div className="grid grid-cols-3 gap-1.5">
-            <Button 
-              variant={role === 'admin' ? 'default' : 'outline'} 
-              size="sm" 
-              className="w-full py-1 h-8 text-xs"
-              onClick={() => handleRoleChange('admin')}
-            >
-              Admin
-            </Button>
-            <Button 
-              variant={role === 'interviewer' ? 'default' : 'outline'} 
-              size="sm" 
-              className="w-full py-1 h-8 text-xs"
-              onClick={() => handleRoleChange('interviewer')}
-            >
-              Interviewer
-            </Button>
-            <Button 
-              variant={role === 'interviewee' ? 'default' : 'outline'} 
-              size="sm" 
-              className="w-full py-1 h-8 text-xs"
-              onClick={() => handleRoleChange('interviewee')}
-            >
-              Interviewee
-            </Button>
+        <div className="flex items-center gap-3 px-2 py-3 rounded-md bg-muted/50">
+          <Avatar>
+            <AvatarImage src={profile?.avatar_url || ''} />
+            <AvatarFallback>{getInitials()}</AvatarFallback>
+          </Avatar>
+          <div className="flex-1 min-w-0">
+            <p className="font-medium truncate">{profile?.full_name || 'User'}</p>
+            <p className="text-xs text-muted-foreground capitalize">{role}</p>
           </div>
         </div>
       </SidebarHeader>
@@ -142,10 +125,14 @@ export default function AppSidebar() {
 
       <SidebarFooter>
         <div className="px-4 py-3.5 mb-1.5">
-          <div className="glass-card rounded-lg p-3 text-center">
-            <p className="text-xs text-muted-foreground">Currently using</p>
-            <p className="font-medium capitalize">{role} View</p>
-          </div>
+          <Button 
+            variant="outline" 
+            className="w-full justify-start text-muted-foreground" 
+            onClick={handleLogout}
+          >
+            <LogOut className="mr-2 h-4 w-4" />
+            Sign Out
+          </Button>
         </div>
       </SidebarFooter>
     </Sidebar>
