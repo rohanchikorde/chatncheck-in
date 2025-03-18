@@ -7,6 +7,16 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 
 export const supabase = createClient<Database>(supabaseUrl, supabaseKey);
 
+// User session management
+export type Profile = {
+  id: string;
+  username: string | null;
+  email: string | null;
+  role: 'admin' | 'interviewer' | 'interviewee';
+  full_name: string | null;
+  avatar_url: string | null;
+};
+
 // Function to handle file uploads to Supabase Storage
 export const uploadResume = async (file: File, candidateName: string): Promise<string | null> => {
   try {
@@ -37,6 +47,62 @@ export const uploadResume = async (file: File, candidateName: string): Promise<s
     return urlData.publicUrl;
   } catch (error) {
     console.error('Error in upload process:', error);
+    return null;
+  }
+};
+
+// Get user profile
+export const getProfile = async (): Promise<Profile | null> => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) return null;
+    
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .single();
+    
+    if (error) {
+      console.error('Error fetching profile:', error);
+      return null;
+    }
+    
+    return data as Profile;
+  } catch (error) {
+    console.error('Error in getProfile:', error);
+    return null;
+  }
+};
+
+// Update user profile
+export const updateProfile = async (profile: Partial<Profile>): Promise<Profile | null> => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) return null;
+    
+    const updates = {
+      ...profile,
+      updated_at: new Date().toISOString(),
+    };
+    
+    const { data, error } = await supabase
+      .from('profiles')
+      .update(updates)
+      .eq('id', user.id)
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error updating profile:', error);
+      return null;
+    }
+    
+    return data as Profile;
+  } catch (error) {
+    console.error('Error in updateProfile:', error);
     return null;
   }
 };
