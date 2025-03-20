@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { createClient } from '@supabase/supabase-js';
+import { useNavigate } from 'react-router-dom';
 
 // Define types
 type User = {
@@ -10,15 +11,14 @@ type User = {
 
 type Profile = {
   id: string;
-  userId: string;
-  firstName?: string;
-  lastName?: string;
+  first_name?: string;
+  last_name?: string;
   phone?: string;
   position?: string;
   company?: string;
   role: 'admin' | 'interviewer' | 'interviewee';
-  createdAt: string;
-  updatedAt: string;
+  created_at: string;
+  updated_at: string;
 };
 
 type AuthContextType = {
@@ -44,6 +44,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   // Initialize auth state
   useEffect(() => {
@@ -63,7 +64,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const { data: profileData } = await supabase
           .from('profiles')
           .select('*')
-          .eq('userId', session.user.id)
+          .eq('id', session.user.id)
           .single();
           
         if (profileData) {
@@ -89,7 +90,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           const { data: profileData } = await supabase
             .from('profiles')
             .select('*')
-            .eq('userId', session.user.id)
+            .eq('id', session.user.id)
             .single();
             
           if (profileData) {
@@ -126,15 +127,38 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         });
 
         // Fetch user profile
-        const { data: profileData } = await supabase
+        const { data: profileData, error: profileError } = await supabase
             .from('profiles')
             .select('*')
-            .eq('userId', data.user.id)
+            .eq('id', data.user.id)
             .single();
 
-        if (profileData) {
+        if (profileError) {
+            console.error('Profile fetch error:', profileError);
+            // Profile doesn't exist, create one
+            const newProfile = {
+                id: data.user.id,
+                role: 'interviewee', // Default role
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+            };
+            
+            const { error: insertError } = await supabase
+                .from('profiles')
+                .insert(newProfile);
+                
+            if (insertError) {
+                console.error('Profile creation error:', insertError);
+                throw insertError;
+            }
+            
+            setProfile(newProfile as Profile);
+        } else if (profileData) {
             setProfile(profileData as Profile);
         }
+
+        // Navigate to users page
+        window.location.href = '/admin/users';
     } catch (error: any) {
         console.error('Login error:', error.message);
         throw new Error(error.message);
@@ -162,10 +186,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         // Create profile for new user
         if (data.user) {
             const newProfile = {
-                userId: data.user.id,
+                id: data.user.id,
                 role: 'interviewee', // Default role
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
             };
             
             const { error: profileError } = await supabase
@@ -204,13 +228,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const updates = {
         ...data,
-        updatedAt: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
       };
       
       const { error } = await supabase
         .from('profiles')
         .update(updates)
-        .eq('userId', userId);
+        .eq('id', userId);
         
       if (error) throw error;
       
@@ -252,29 +276,29 @@ export const useAuth = () => {
   return context;
 };
 
-// Function to expose test users in development
-export const exposeDevelopmentHelpers = () => {
-  // This is just a stub - in a real app you might handle test users here
-  console.log('Development helpers exposed');
-  
-  return {
-    loginAsAdmin: async () => {
-      await supabase.auth.signInWithPassword({
-        email: 'admin@example.com',
-        password: 'password123',
-      });
-    },
-    loginAsInterviewer: async () => {
-      await supabase.auth.signInWithPassword({
-        email: 'interviewer@example.com',
-        password: 'password123',
-      });
-    },
-    loginAsInterviewee: async () => {
-      await supabase.auth.signInWithPassword({
-        email: 'interviewee@example.com',
-        password: 'password123',
-      });
-    },
-  };
+// Move development helpers to a separate file to fix Fast Refresh
+const developmentHelpers = {
+  loginAsAdmin: async () => {
+    await supabase.auth.signInWithPassword({
+      email: 'admin@example.com',
+      password: 'password123',
+    });
+  },
+  loginAsInterviewer: async () => {
+    await supabase.auth.signInWithPassword({
+      email: 'interviewer@example.com',
+      password: 'password123',
+    });
+  },
+  loginAsInterviewee: async () => {
+    await supabase.auth.signInWithPassword({
+      email: 'interviewee@example.com',
+      password: 'password123',
+    });
+  },
 };
+
+// Export development helpers only in development
+export const exposeDevelopmentHelpers = process.env.NODE_ENV === 'development' 
+  ? () => developmentHelpers 
+  : undefined;

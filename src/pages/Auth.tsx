@@ -29,7 +29,6 @@ const Auth = () => {
         title: "Login successful",
         description: "You have been logged in successfully",
       });
-      navigate('/');
     } catch (error: any) {
       toast({
         title: "Login failed",
