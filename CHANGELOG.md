@@ -25,6 +25,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Created shared utilities in `interview-sync/shared`
 - Updated API endpoints to use relative paths
 
+## [1.1.0] - 2025-03-24
+
+### Changed
+- Moved frontend directory to root level for better project organization
+- Updated Vite configuration to reflect new directory structure
+- Improved import paths for better consistency
+
+### Added
+- New project structure documentation
+- Updated README files in both root and frontend directories
+
+## [1.0.0] - 2025-03-23
+
+### Added
+- Initial project setup
+- Frontend application with React and Vite
+- Backend API with Flask
+- Shared components and utilities
+
+### Changed
+- Implemented basic routing and component structure
+- Set up development environment configuration
+
+### Fixed
+- Initial setup issues and configuration
+
 ## [0.1.0] - 2025-03-23
 
 ### Added
