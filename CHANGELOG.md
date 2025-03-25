@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Enhanced UI components for solutions pages
 - Added testimonials and case studies to Enterprise Solutions page
 - Created new UI components for landing page
+- Initial implementation of demo requests.
 
 ### Fixed
 - Fixed frontend-backend connection issues
@@ -27,6 +28,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Improved Supabase connection handling
 - Enhanced error handling for Supabase requests
 - Added retry mechanism for failed requests
+- Resolved JSON decoding errors when handling API responses.
+- Handled 401 Unauthorized errors with mock data for testing.
+
+### Changed
+- Fixed SSL verification issues in Supabase API requests.
+- Enhanced error handling to return consistent response formats.
+- Updated mock responses to match expected formats in unit tests.
 
 ## [1.1.0] - 2025-03-25
 
