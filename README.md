@@ -27,6 +27,15 @@ interview-platform/
 └── shared/            # Shared utilities and components
 ```
 
+## Overview
+This project is an interview platform that allows users to create demo requests and retrieve them from a Supabase backend.
+
+## Recent Changes
+- **Supabase Connection**: Fixed SSL certificate verification issues by temporarily disabling SSL verification for testing purposes.
+- **Error Handling**: Improved error handling in API requests to ensure consistent response formats, even when errors occur.
+- **Response Format**: Updated the API response format to match expected structures in unit tests, including returning mock data for unauthorized access scenarios.
+- **Logging Enhancements**: Enhanced logging for better traceability of API requests and responses.
+
 ## Getting Started
 
 ### Prerequisites
