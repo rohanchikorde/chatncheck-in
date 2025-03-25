@@ -1,18 +1,14 @@
-from .utils.supabase import supabase_request
+from backend.utils.supabase import supabase_request
 
 def create_demo_request(data):
     try:
-        # Required fields validation
-        required_fields = ['first_name', 'last_name', 'work_email', 'agrees_to_terms']
-        
-        for field in required_fields:
-            if field not in data or not data[field]:
-                return None, 400, f"Missing required field: {field}"
-        
-        # Validate email format
-        if '@' not in data['work_email'] or '.' not in data['work_email']:
-            return None, 400, "Invalid email format"
-        
+        # Validate required fields
+        required_fields = ['first_name', 'last_name', 'work_email']
+        missing_fields = [field for field in required_fields if field not in data]
+        if missing_fields:
+            return None, 400, f"Missing required fields: {', '.join(missing_fields)}"
+
+        # Prepare data for Supabase
         demo_request_data = {
             'first_name': data['first_name'],
             'last_name': data['last_name'],
@@ -21,18 +17,14 @@ def create_demo_request(data):
             'service_interest': data.get('service_interest'),
             'message': data.get('message'),
         }
+
+        # Make request to Supabase
+        response = supabase_request('demo_requests', demo_request_data, method='POST')
         
-        response, status_code = supabase_request(
-            '/rest/v1/demo_requests',
-            method='POST',
-            data=demo_request_data
-        )
-        
-        if status_code >= 400:
-            return None, status_code, f"Failed to save demo request: {response.get('error', 'Unknown error')}"
-        
-        return response, 201, "Demo request submitted successfully"
-    
+        if response.status_code == 201:
+            return response.json(), 201, "Demo request created successfully"
+        else:
+            return None, response.status_code, "Failed to create demo request"
+
     except Exception as e:
-        print(f"Error in create_demo_request: {str(e)}")
-        return None, 500, str(e)
+        return None, 500, f"Internal server error: {str(e)}"

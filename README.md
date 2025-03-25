@@ -7,11 +7,24 @@ A modern interview management platform built with React, Vite, and Flask.
 ```
 interview-platform/
 ├── frontend/           # React frontend application
+│   ├── src/           # Source code
+│   ├── public/        # Static assets
+│   └── package.json   # Frontend dependencies
 ├── backend/           # Flask backend API
-├── shared/            # Shared utilities and components
-├── tests/             # Test files
-├── docs/              # Documentation
-└── package.json       # Root package configuration
+│   ├── app.py         # Main application file
+│   ├── config.py      # Configuration settings
+│   ├── routes/        # API routes
+│   │   ├── demo_requests.py
+│   │   └── interviews.py
+│   ├── services/      # Business logic
+│   │   ├── demo_requests.py
+│   │   └── interviews.py
+│   ├── utils/         # Utility functions
+│   │   ├── __init__.py
+│   │   ├── supabase.py
+│   │   └── validators.py
+│   └── requirements.txt # Backend dependencies
+└── shared/            # Shared utilities and components
 ```
 
 ## Getting Started
@@ -32,9 +45,6 @@ cd interview-platform
 
 2. Install dependencies:
 ```bash
-# Install root dependencies
-npm install
-
 # Install frontend dependencies
 cd frontend
 npm install
@@ -48,7 +58,7 @@ pip install -r requirements.txt
 ```bash
 # Start backend server (in one terminal)
 cd backend
-python server.py
+python app.py
 
 # Start frontend server (in another terminal)
 cd frontend
@@ -57,11 +67,9 @@ npm run dev
 
 ## Development
 
-The project uses a monorepo structure with separate frontend and backend directories. The frontend is built with React and Vite, while the backend uses Flask.
-
 ### Frontend Development
 
-The frontend is located in the `frontend` directory and uses:
+The frontend is built with:
 - React 18
 - Vite as the build tool
 - TypeScript for type safety
@@ -71,7 +79,7 @@ The frontend is located in the `frontend` directory and uses:
 
 ### Backend Development
 
-The backend is located in the `backend` directory and uses:
+The backend is built with:
 - Flask for the API server
 - Supabase for database operations
 - Requests for HTTP requests

@@ -28,6 +28,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Enhanced error handling for Supabase requests
 - Added retry mechanism for failed requests
 
+## [1.1.0] - 2025-03-25
+
+### Changed
+- Updated project structure to modular architecture
+- Renamed `server.py` to `app.py` as main entry point
+- Restructured backend into clear modules:
+  - `routes/` for API endpoints
+  - `services/` for business logic
+  - `utils/` for utility functions
+
+### Added
+- `__init__.py` files in all backend directories for proper package structure
+- Improved error handling in service functions
+- Better module organization for maintainability
+
+### Fixed
+- Import errors in backend modules
+- Module visibility issues
+- Path configuration for Python imports
+
 ## [1.1.0] - 2025-03-24
 
 ### Changed
@@ -85,4 +105,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Configuration file organization
 
 [Unreleased]: https://github.com/rohanchikorde/chatncheck-in/compare/v0.1.0...HEAD
+[1.1.0]: https://github.com/rohanchikorde/chatncheck-in/compare/v1.0.0...v1.1.0
+[1.0.0]: https://github.com/rohanchikorde/chatncheck-in/compare/v0.1.0...v1.0.0
 [0.1.0]: https://github.com/rohanchikorde/chatncheck-in/compare/v0.0.0...v0.1.0

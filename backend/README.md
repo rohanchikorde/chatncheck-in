@@ -1,41 +1,48 @@
-# InterviewSync Backend
+# Interview Platform Backend
 
-The backend API for the InterviewSync platform, built with Flask and Supabase.
+The backend API for the Interview Platform, built with Flask and Supabase.
+
+## Project Structure
+
+```
+backend/
+├── app.py                 # Main application file
+├── config.py             # Configuration settings
+├── routes/              # API routes
+│   ├── demo_requests.py  # Demo request endpoints
+│   └── interviews.py     # Interview management endpoints
+├── services/            # Business logic
+│   ├── demo_requests.py  # Demo request service
+│   └── interviews.py     # Interview service
+├── utils/              # Utility functions
+│   ├── __init__.py      # Package initialization
+│   ├── supabase.py      # Supabase integration
+│   └── validators.py    # Input validation
+└── requirements.txt      # Backend dependencies
+```
 
 ## Features
 
 - RESTful API endpoints for interview management
-- User authentication and authorization
-- File upload and storage
-- Real-time notifications
-- Interview scheduling and tracking
-- Skill-based matching
+- Demo request system
+- Supabase integration for data storage
+- Input validation and error handling
+- CORS support for frontend integration
+- Modular architecture with clear separation of concerns
 
 ## API Endpoints
 
+### Demo Requests
+
+- `POST /api/demo-requests` - Create a new demo request
+
 ### Interviews
 
-- `POST /api/interviews` - Create a new interview
 - `GET /api/interviews` - Get all interviews
 - `GET /api/interviews/:id` - Get a specific interview
+- `POST /api/interviews` - Create a new interview
 - `PUT /api/interviews/:id` - Update an interview
 - `DELETE /api/interviews/:id` - Delete an interview
-
-### Users
-
-- `GET /api/users` - Get all users
-- `GET /api/users/:id` - Get a specific user
-- `POST /api/users` - Create a new user
-- `PUT /api/users/:id` - Update a user
-- `DELETE /api/users/:id` - Delete a user
-
-### Companies
-
-- `GET /api/companies` - Get all companies
-- `GET /api/companies/:id` - Get a specific company
-- `POST /api/companies` - Create a new company
-- `PUT /api/companies/:id` - Update a company
-- `DELETE /api/companies/:id` - Delete a company
 
 ## Setup
 
@@ -57,7 +64,7 @@ The backend API for the InterviewSync platform, built with Flask and Supabase.
 
 4. Start the server:
    ```bash
-   python server.py
+   python app.py
    ```
 
 ## Environment Variables
@@ -65,17 +72,25 @@ The backend API for the InterviewSync platform, built with Flask and Supabase.
 ```plaintext
 SUPABASE_URL=your_supabase_url
 SUPABASE_KEY=your_supabase_key
-PORT=5000
-FLASK_ENV=development
-FLASK_APP=server.py
-```
-
-## Running Tests
-
-```bash
-python -m pytest
+FLASK_DEBUG=1
+FLASK_PORT=5000
+CORS_ORIGINS="*"
+CORS_HEADERS="Content-Type"
+CORS_METHODS="GET,POST,PUT,DELETE,OPTIONS"
 ```
 
 ## Development
 
-The backend is configured with CORS enabled and runs in debug mode during development. All API endpoints are documented using Swagger/OpenAPI.
+The backend is configured with:
+- Flask running in debug mode during development
+- CORS enabled for frontend integration
+- Python path configured for module imports
+- Error handling and logging
+
+## Contributing
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
