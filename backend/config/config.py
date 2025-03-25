@@ -23,6 +23,10 @@ if not SUPABASE_KEY:
     logger.error("SUPABASE_KEY is not configured")
     raise ValueError("SUPABASE_KEY must be configured")
 
+# JWT Configuration
+JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', 'your-secret-key-here')  # Change in production
+JWT_EXPIRATION_HOURS = 24
+
 # Flask configuration
 FLASK_DEBUG = os.getenv('FLASK_DEBUG', 'True') == 'True'
 FLASK_PORT = int(os.getenv('FLASK_PORT', '5000'))
@@ -39,3 +43,5 @@ logger.info(f"Flask Port: {FLASK_PORT}")
 logger.info(f"CORS Origins: {CORS_ORIGINS}")
 logger.info(f"CORS Headers: {CORS_HEADERS}")
 logger.info(f"CORS Methods: {CORS_METHODS}")
+logger.info(f"JWT Secret Key: {JWT_SECRET_KEY}")
+logger.info(f"JWT Expiration Hours: {JWT_EXPIRATION_HOURS}")

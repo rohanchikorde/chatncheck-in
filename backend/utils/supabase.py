@@ -13,7 +13,7 @@ session = requests.Session()
 adapter = requests.adapters.HTTPAdapter(max_retries=3)
 session.mount('https://', adapter)
 
-def supabase_request(endpoint, method='GET', data=None, headers=None, files=None):
+def supabase_request(endpoint, method='GET', data=None, headers=None, files=None, query=None):
     if headers is None:
         headers = {}
     
@@ -21,52 +21,67 @@ def supabase_request(endpoint, method='GET', data=None, headers=None, files=None
     headers.update({
         'apikey': config.SUPABASE_KEY,
         'Authorization': f'Bearer {config.SUPABASE_KEY}',
-        'Content-Type': 'application/json' if method in ['POST', 'PUT'] else 'application/json'
+        'Content-Type': 'application/json',
+        'Prefer': 'return=representation'
     })
+    
+    # Remove leading slash if present
+    endpoint = endpoint.lstrip('/')
     
     # Construct proper Supabase REST API URL
     url = f"{config.SUPABASE_URL}/rest/v1/{endpoint}"
     
+    logger.info(f"Making Supabase request: {method} {url}")
+    logger.info(f"Headers: {headers}")
+    if data:
+        logger.info(f"Data: {data}")
+    if query:
+        logger.info(f"Query: {query}")
+    
     try:
-        # Disable SSL verification for testing purposes
-        verify = False
-        if method == 'GET':
-            response = session.get(url, headers=headers, verify=verify)
-        elif method == 'POST':
-            if files:
-                response = session.post(url, headers=headers, data=data, files=files, verify=verify)
-            else:
-                response = session.post(url, headers=headers, json=data, verify=verify)
-        elif method == 'PUT':
-            response = session.put(url, headers=headers, json=data, verify=verify)
-        elif method == 'DELETE':
-            response = session.delete(url, headers=headers, verify=verify)
-        else:
-            raise ValueError(f"Unsupported HTTP method: {method}")
+        # Make the request
+        response = session.request(
+            method=method,
+            url=url,
+            headers=headers,
+            json=data if method in ['POST', 'PUT'] else None,
+            params=query,
+            files=files,
+            verify=False  # Only for testing
+        )
+        
+        # Log response details
+        logger.info(f"Response status: {response.status_code}")
+        logger.info(f"Response text: {response.text}")
+        
+        # Handle error responses
+        if response.status_code >= 400:
+            error_msg = response.text
+            try:
+                error_json = response.json()
+                if isinstance(error_json, dict):
+                    error_msg = error_json.get('message', error_json.get('error', response.text))
+            except:
+                pass
+            logger.error(f"Error response: {error_msg}")
+            return {"error": f"HTTP {response.status_code}: {error_msg}"}
+        
+        # Parse successful response
+        try:
+            if response.text:
+                return response.json()
+            return None
+        except ValueError as e:
+            logger.error(f"Failed to parse JSON response: {e}")
+            return {"error": "Invalid JSON response from server"}
             
-        response.raise_for_status()
-        return response
-        
     except requests.exceptions.RequestException as e:
-        logger.error("Supabase request failed: %s", str(e))
-        logger.error("URL: %s", url)
-        logger.error("Method: %s", method)
-        logger.error("Headers: %s", headers)
-        logger.error("Data: %s", data)
-        
-        # Create a mock response object with status_code and text attributes
-        class MockResponse:
-            def __init__(self, status_code, text):
-                self.status_code = status_code
-                self.text = text
-                
-            def json(self):
-                return {"error": self.text}
-        
-        # Return a proper error response object
+        logger.error(f"Error making request to Supabase: {str(e)}")
         if hasattr(e, 'response') and e.response is not None:
-            return MockResponse(e.response.status_code, e.response.text)
-        return MockResponse(500, f"Internal server error: {str(e)}")
+            logger.error(f"Response status: {e.response.status_code}")
+            logger.error(f"Response text: {e.response.text}")
+            return {"error": f"HTTP {e.response.status_code}: {e.response.text}"}
+        return {"error": str(e)}
 
 def upload_file_to_supabase(file, candidate_name):
     """
