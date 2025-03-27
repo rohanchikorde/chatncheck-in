@@ -1,37 +1,64 @@
 from flask import Blueprint, request, jsonify
-from backend.services.demo_requests import create_demo_request, get_demo_requests
+from services.demo_requests import create_demo_request, get_demo_requests
+import logging
 
-demo_bp = Blueprint('demo', __name__)
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-@demo_bp.route('/api/demo-requests', methods=['POST'])
+demo_requests_bp = Blueprint('demo_requests', __name__, url_prefix='/api/v1')
+
+@demo_requests_bp.route('/demo-requests', methods=['POST', 'OPTIONS'])
 def create_demo_request_route():
+    if request.method == 'OPTIONS':
+        return '', 200
+    
     try:
-        data = request.json
+        # Get JSON data from request
+        data = request.get_json()
+        if not data:
+            return jsonify({
+                'error': 'No JSON data provided',
+                'status': 'error'
+            }), 400
+
+        logger.info("Received demo request data: %s", data)
+        
+        # Create demo request
         response, status_code, message = create_demo_request(data)
-        return jsonify({
-            'success': status_code < 400,
+        
+        # Prepare response
+        result = {
+            'data': response if response else None,
             'message': message,
-            'data': response
-        }), status_code
+            'success': status_code == 201
+        }
+        
+        logger.info("Returning response: %s", result)
+        return jsonify(result), status_code
+        
     except Exception as e:
+        logger.error("Error in demo request route: %s", str(e))
         return jsonify({
-            'success': False,
-            'message': f"Internal server error: {str(e)}",
-            'data': None
+            'error': str(e),
+            'status': 'error'
         }), 500
 
-@demo_bp.route('/api/demo-requests', methods=['GET'])
-def get_demo_requests_route():
+@demo_requests_bp.route('/demo-requests', methods=['GET'])
+def get_all_demo_requests():
     try:
-        response, status_code, message = get_demo_requests()
+        logger.info("Received GET request to /demo-requests")
+        requests = get_demo_requests()
+        logger.info("Response from service: %s", requests)
+        
         return jsonify({
-            'success': status_code < 400,
-            'message': message,
-            'data': response
-        }), status_code
+            'data': requests,
+            'message': 'Demo requests retrieved successfully',
+            'success': True
+        }), 200
     except Exception as e:
+        logger.error("Error getting demo requests: %s", str(e), exc_info=True)
         return jsonify({
-            'success': False,
-            'message': f"Internal server error: {str(e)}",
-            'data': None
+            'error': str(e),
+            'status': 'error'
         }), 500

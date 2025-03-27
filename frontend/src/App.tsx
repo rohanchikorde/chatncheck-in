@@ -1,6 +1,6 @@
-
 import React from 'react';
-import { BrowserRouter, Routes, Route, Outlet } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import { AuthProvider } from './contexts/AuthContext';
 import LandingPage from './pages/LandingPage';
 import BookDemoPage from './pages/BookDemoPage';
 import RequestDemoPage from './pages/RequestDemoPage';
@@ -19,54 +19,63 @@ import DemoRequestsPage from './pages/admin/DemoRequestsPage';
 import InterviewerDashboard from './pages/interviewer/InterviewerDashboard';
 import InterviewerInterviewsPage from './pages/interviewer/InterviewerInterviewsPage';
 import InterviewerFeedbackPage from './pages/interviewer/InterviewerFeedbackPage';
-import IntervieweeInterviewsPage from './pages/interviewee/IntervieweeInterviewsPage';
 import IntervieweeDashboard from './pages/interviewee/IntervieweeDashboard';
+import IntervieweeInterviewsPage from './pages/interviewee/IntervieweeInterviewsPage';
 import NotFound from './pages/NotFound';
+import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
+import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/book-demo" element={<BookDemoPage />} />
-        <Route path="/request-demo" element={<RequestDemoPage />} />
-        <Route path="/demo-scheduled" element={<DemoScheduledPage />} />
-        
-        {/* Solution pages */}
-        <Route path="/solutions/enterprise" element={<EnterpriseSolutionsPage />} />
-        <Route path="/solutions/it-services" element={<ITServicesPage />} />
-        <Route path="/solutions/staffing" element={<StaffingSolutionsPage />} />
-        <Route path="/solutions/startups" element={<StartupSolutionsPage />} />
-        <Route path="/solutions/education" element={<EducationSolutionsPage />} />
-        
-        {/* Admin routes */}
-        <Route path="/admin" element={<Shell><Outlet /></Shell>}>
-          <Route index element={<AdminDashboard />} />
-          <Route path="dashboard" element={<AdminDashboard />} />
-          <Route path="interviews" element={<InterviewsPage />} />
-          <Route path="interviews/:id" element={<InterviewDetailPage />} />
-          <Route path="users" element={<UsersPage />} />
-          <Route path="demo-requests" element={<DemoRequestsPage />} />
-        </Route>
+    <AuthProvider>
+      <Router>
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          
+          {/* Public routes */}
+          <Route path="/book-demo" element={<BookDemoPage />} />
+          <Route path="/request-demo" element={<RequestDemoPage />} />
+          <Route path="/demo-scheduled" element={<DemoScheduledPage />} />
+          
+          {/* Solution pages */}
+          <Route path="/solutions/enterprise" element={<EnterpriseSolutionsPage />} />
+          <Route path="/solutions/it-services" element={<ITServicesPage />} />
+          <Route path="/solutions/staffing" element={<StaffingSolutionsPage />} />
+          <Route path="/solutions/startups" element={<StartupSolutionsPage />} />
+          <Route path="/solutions/education" element={<EducationSolutionsPage />} />
+          
+          {/* Admin routes */}
+          <Route path="/admin" element={<ProtectedRoute><Shell><Outlet /></Shell></ProtectedRoute>}>
+            <Route index element={<AdminDashboard />} />
+            <Route path="dashboard" element={<AdminDashboard />} />
+            <Route path="interviews" element={<InterviewsPage />} />
+            <Route path="interviews/:id" element={<InterviewDetailPage />} />
+            <Route path="users" element={<UsersPage />} />
+            <Route path="demo-requests" element={<DemoRequestsPage />} />
+          </Route>
 
-        {/* Interviewer routes */}
-        <Route path="/interviewer" element={<Shell><Outlet /></Shell>}>
-          <Route index element={<InterviewerDashboard />} />
-          <Route path="dashboard" element={<InterviewerDashboard />} />
-          <Route path="interviews" element={<InterviewerInterviewsPage />} />
-          <Route path="feedback" element={<InterviewerFeedbackPage />} />
-        </Route>
+          {/* Interviewer routes */}
+          <Route path="/interviewer" element={<ProtectedRoute><Shell><Outlet /></Shell></ProtectedRoute>}>
+            <Route index element={<InterviewerDashboard />} />
+            <Route path="dashboard" element={<InterviewerDashboard />} />
+            <Route path="interviews" element={<InterviewerInterviewsPage />} />
+            <Route path="feedback" element={<InterviewerFeedbackPage />} />
+          </Route>
 
-        {/* Interviewee routes */}
-        <Route path="/interviewee" element={<Shell><Outlet /></Shell>}>
-          <Route index element={<IntervieweeDashboard />} />
-          <Route path="dashboard" element={<IntervieweeDashboard />} />
-          <Route path="interviews" element={<IntervieweeInterviewsPage />} />
-        </Route>
+          {/* Interviewee routes */}
+          <Route path="/interviewee" element={<ProtectedRoute><Shell><Outlet /></Shell></ProtectedRoute>}>
+            <Route index element={<IntervieweeDashboard />} />
+            <Route path="dashboard" element={<IntervieweeDashboard />} />
+            <Route path="interviews" element={<IntervieweeInterviewsPage />} />
+          </Route>
 
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-    </BrowserRouter>
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </Router>
+    </AuthProvider>
   );
 }
 

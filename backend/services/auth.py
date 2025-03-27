@@ -3,6 +3,7 @@ from utils.supabase import supabase_request
 from utils.jwt_handler import create_jwt_token, verify_jwt_token
 from werkzeug.security import generate_password_hash, check_password_hash
 import os
+import datetime
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -11,7 +12,8 @@ logger = logging.getLogger(__name__)
 class AuthService:
     def __init__(self):
         self.table_name = 'users'  # Table name without schema
-    
+        self.blacklist_table = 'token_blacklist'
+
     def register_user(self, email: str, password: str, first_name: str, last_name: str, phone: str = None, role: str = 'client_coordinator') -> dict:
         """Register a new user"""
         try:
@@ -33,7 +35,8 @@ class AuthService:
                 'first_name': first_name,  
                 'last_name': last_name,    
                 'phone': phone,            
-                'role': role               
+                'role': role,              
+                'is_active': True
             }
             
             logger.info("Making request to Supabase to create user")
@@ -49,7 +52,8 @@ class AuthService:
                 logger.error(f"Error from Supabase: {response['error']}")
                 raise ValueError(response['error'])
             
-            return response
+            # Return the first item from the list if it exists
+            return response[0] if isinstance(response, list) and len(response) > 0 else None
             
         except Exception as e:
             logger.error(f"Error in register_user: {str(e)}")
@@ -79,6 +83,11 @@ class AuthService:
         try:
             logger.info("Verifying JWT token")
             payload = verify_jwt_token(token)
+            
+            # Check if token is blacklisted
+            if self._is_token_blacklisted(token):
+                raise ValueError('Token has been revoked')
+                
             logger.info("Getting user by ID")
             user = self._get_user_by_id(payload['user_id'])
             if not user:
@@ -93,35 +102,87 @@ class AuthService:
             raise ValueError('Invalid token')
     
     def logout_user(self, token: str) -> None:
-        """Logout user (can be extended to handle token blacklisting)"""
+        """Logout user by blacklisting the token"""
         try:
             logger.info("Verifying JWT token")
             verify_jwt_token(token)
-            # In a more complex implementation, you might want to:
-            # 1. Add the token to a blacklist
-            # 2. Clear any session data
-            # 3. Handle refresh tokens
-            return True
-        except:
-            logger.error("Invalid token")
-            raise ValueError('Invalid token')
+            
+            # Add token to blacklist
+            logger.info("Adding token to blacklist")
+            blacklist_data = {
+                'token': token,
+                'blacklisted_at': datetime.datetime.utcnow().isoformat()
+            }
+            
+            response = supabase_request(
+                self.blacklist_table,
+                method='POST',
+                data=blacklist_data
+            )
+            
+            if isinstance(response, dict) and 'error' in response:
+                logger.error(f"Error blacklisting token: {response['error']}")
+                raise ValueError('Failed to blacklist token')
+            
+            logger.info("Token successfully blacklisted")
+            return {'message': 'Successfully logged out'}
+            
+        except Exception as e:
+            logger.error(f"Error in logout_user: {str(e)}")
+            raise ValueError(str(e))
+    
+    def _is_token_blacklisted(self, token: str) -> bool:
+        """Check if a token is in the blacklist"""
+        try:
+            response = supabase_request(
+                self.blacklist_table,
+                method='GET',
+                params={'token': token}
+            )
+            
+            if isinstance(response, dict) and 'error' in response:
+                logger.error(f"Error checking blacklist: {response['error']}")
+                return False
+            
+            return len(response) > 0
+            
+        except Exception as e:
+            logger.error(f"Error checking blacklist: {str(e)}")
+            return False
     
     def _get_user_by_email(self, email: str) -> dict:
-        """Helper method to get user by email"""
-        logger.info(f"Getting user by email: {email}")
-        response = supabase_request(
-            'users',  
-            method='GET',
-            query={'email': f'eq.{email}'})
-        
-        return response[0] if response and len(response) > 0 else None
-        
+        """Get user by email"""
+        try:
+            response = supabase_request(
+                self.table_name,
+                method='GET',
+                params={'email': f'eq.{email}'}
+            )
+            
+            if isinstance(response, dict) and 'error' in response:
+                logger.error(f"Error getting user by email: {response['error']}")
+                return None
+            
+            return response[0] if isinstance(response, list) and len(response) > 0 else None
+            
+        except Exception as e:
+            logger.error(f"Error in _get_user_by_email: {str(e)}")
+            return None
+    
     def _get_user_by_id(self, user_id: str) -> dict:
-        """Helper method to get user by ID"""
-        logger.info(f"Getting user by ID: {user_id}")
-        response = supabase_request(
-            f'users?id=eq.{user_id}',  
-            method='GET'
-        )
-        
-        return response[0] if response and len(response) > 0 else None
+        """Get user by ID"""
+        try:
+            response = supabase_request(
+                f'{self.table_name}?id=eq.{user_id}',  
+                method='GET'
+            )
+            
+            if isinstance(response, dict) and 'error' in response:
+                logger.error(f"Error getting user by ID: {response['error']}")
+                return None
+            
+            return response[0] if isinstance(response, list) and len(response) > 0 else None
+            
+        except Exception as e:
+            logger.error(f"Error in _get_user_by_id: {str(e)}")
+            return None

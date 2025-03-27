@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -13,6 +12,7 @@ import {
 } from '@/components/ui/navigation-menu';
 import { Box, Code, GraduationCap, Building, Users, Rocket } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/contexts/AuthContext';
 
 const ListItem = React.forwardRef<
   React.ElementRef<"a">,
@@ -42,6 +42,7 @@ ListItem.displayName = "ListItem";
 
 export default function LandingPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
@@ -101,19 +102,19 @@ export default function LandingPage() {
                       </ListItem>
                       <ListItem 
                         href="/solutions/startups"
-                        title="Startup Solutions" 
+                        title="Startups" 
                         className="flex items-start gap-2"
                       >
                         <Rocket className="h-5 w-5 text-indigo-500 flex-shrink-0 mt-0.5" />
-                        Scale your tech teams fast with minimal effort
+                        Scale your engineering team with confidence
                       </ListItem>
                       <ListItem 
                         href="/solutions/education"
-                        title="Education Solutions" 
+                        title="Education" 
                         className="flex items-start gap-2"
                       >
                         <GraduationCap className="h-5 w-5 text-indigo-500 flex-shrink-0 mt-0.5" />
-                        Simplify university hiring with scalable tech screening
+                        Transform technical education with real-world assessments
                       </ListItem>
                     </ul>
                   </NavigationMenuContent>
@@ -157,12 +158,21 @@ export default function LandingPage() {
           </div>
           
           <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={() => navigate('/login')}
-            >
-              Login
-            </Button>
+            {user ? (
+              <Button
+                variant="outline"
+                onClick={() => navigate('/dashboard')}
+              >
+                Dashboard
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                onClick={() => navigate('/login')}
+              >
+                Login
+              </Button>
+            )}
             <Button
               className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700"
               onClick={() => navigate('/book-demo')}
@@ -309,7 +319,7 @@ export default function LandingPage() {
 
       <footer className="border-t border-border py-8 px-4 bg-gray-50 mt-16">
         <div className="container mx-auto text-center text-sm text-muted-foreground">
-          © 2023 InterviewPulse. All rights reserved.
+          2023 InterviewPulse. All rights reserved.
         </div>
       </footer>
     </div>

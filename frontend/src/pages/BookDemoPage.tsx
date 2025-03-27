@@ -34,8 +34,11 @@ export default function BookDemoPage() {
     try {
       setIsSubmitting(true);
       
+      // Log the form values being submitted
+      console.log('Form values being submitted:', values);
+      
       // Send request to the Flask backend through the proxy
-      const response = await fetch('http://localhost:5000/api/demo-requests', {
+      const response = await fetch('http://localhost:5000/api/v1/demo-requests', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -51,10 +54,14 @@ export default function BookDemoPage() {
         }),
       });
 
+      // Log the response status
+      console.log('Response status:', response.status);
+      
       const data = await response.json();
+      console.log('Response data:', data);
       
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to submit demo request');
+        throw new Error(data.message || 'Failed to submit demo request');
       }
 
       toast({
@@ -65,9 +72,21 @@ export default function BookDemoPage() {
       navigate('/demo-scheduled');
     } catch (error) {
       console.error('Error submitting demo request:', error);
+      let errorMessage = "There was a problem submitting your request. Please try again.";
+      
+      if (error instanceof Error) {
+        if (error.message.includes('terms and conditions')) {
+          errorMessage = "You must agree to our terms and conditions";
+        } else if (error.message.includes('required fields')) {
+          errorMessage = "Please fill in all required fields";
+        } else if (error.message.includes('email format')) {
+          errorMessage = "Please enter a valid email address";
+        }
+      }
+
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "There was a problem submitting your request. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {

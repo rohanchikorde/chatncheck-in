@@ -8,25 +8,42 @@ if project_root not in sys.path:
 
 from flask import Flask, make_response
 from flask_cors import CORS
-from config import config
-from routes.demo_requests import demo_bp
-from routes.interviews import interview_bp
-from routes.auth import auth_bp
+from config import (
+    FLASK_DEBUG,
+    FLASK_PORT,
+    CORS_ORIGINS,
+    CORS_HEADERS,
+    CORS_METHODS
+)
+from routes import demo_requests_bp, interview_bp, auth_bp
 
 app = Flask(__name__)
-CORS(app, origins=config.CORS_ORIGINS, headers=config.CORS_HEADERS, methods=config.CORS_METHODS)
+
+# Configure CORS
+CORS(app, 
+     origins=CORS_ORIGINS,
+     methods=CORS_METHODS,
+     allow_headers=['Content-Type', 'Authorization'] + CORS_HEADERS,
+     supports_credentials=True)
 
 # Register blueprints
-app.register_blueprint(demo_bp)
+app.register_blueprint(demo_requests_bp)
 app.register_blueprint(interview_bp)
 app.register_blueprint(auth_bp)
 
 # Handle OPTIONS requests for CORS preflight
-@app.route('/api/interviews', methods=['OPTIONS'])
-@app.route('/api/interviews/<interview_id>', methods=['OPTIONS'])
-@app.route('/api/demo-requests', methods=['OPTIONS'])
-def handle_options(interview_id=None):
-    return make_response('', 200)
+@app.route('/<path:path>', methods=['OPTIONS'])
+def handle_options(path):
+    response = make_response('', 200)
+    response.headers['Access-Control-Allow-Origin'] = '*' if '*' in CORS_ORIGINS else ','.join(CORS_ORIGINS)
+    response.headers['Access-Control-Allow-Methods'] = ','.join(CORS_METHODS)
+    response.headers['Access-Control-Allow-Headers'] = ','.join(['Content-Type', 'Authorization'] + CORS_HEADERS)
+    response.headers['Access-Control-Allow-Credentials'] = 'true'
+    return response
+
+@app.route('/')
+def index():
+    return make_response({'message': 'API is running'})
 
 if __name__ == '__main__':
-    app.run(debug=config.FLASK_DEBUG, port=config.FLASK_PORT)
+    app.run(debug=FLASK_DEBUG, port=FLASK_PORT)
