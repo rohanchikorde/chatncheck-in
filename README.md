@@ -8,9 +8,26 @@ A modern interview management platform built with React, Vite, and Flask.
 interview-platform/
 ├── frontend/           # React frontend application
 │   ├── src/           # Source code
-│   │   ├── components/ # React components
+│   │   ├── App.tsx    # Root component
+│   │   ├── App.css    # Root styles
+│   │   ├── main.tsx   # Entry point
+│   │   ├── index.css  # Global styles
+│   │   ├── components/ # Reusable React components
+│   │   │   ├── ui/    # UI components (buttons, inputs, etc.)
+│   │   │   └── layout/ # Layout components (header, footer, etc.)
 │   │   ├── pages/     # Page components
-│   │   └── features/  # Feature-specific code
+│   │   │   ├── BookDemoPage.tsx
+│   │   │   ├── DemoScheduledPage.tsx
+│   │   │   ├── LandingPage.tsx
+│   │   │   ├── RequestDemoPage.tsx
+│   │   │   ├── admin/ # Admin pages
+│   │   │   ├── interviewee/ # Interviewee pages
+│   │   │   ├── interviewer/ # Interviewer pages
+│   │   │   └── solutions/ # Solutions pages
+│   │   ├── features/  # Feature-specific code
+│   │   ├── hooks/     # Custom React hooks
+│   │   ├── integrations/ # Third-party integrations
+│   │   └── lib/       # Shared libraries and utilities
 │   ├── public/        # Static assets
 │   └── package.json   # Frontend dependencies
 ├── backend/           # Flask backend API
