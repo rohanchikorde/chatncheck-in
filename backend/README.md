@@ -1,3 +1,4 @@
+
 # Interview Platform Backend
 
 The backend API for the Interview Platform, built with Flask and Supabase.
@@ -7,18 +8,26 @@ The backend API for the Interview Platform, built with Flask and Supabase.
 ```
 backend/
 ├── app.py                 # Main application file
-├── config.py             # Configuration settings
-├── routes/              # API routes
-│   ├── demo_requests.py  # Demo request endpoints
-│   └── interviews.py     # Interview management endpoints
-├── services/            # Business logic
-│   ├── demo_requests.py  # Demo request service
-│   └── interviews.py     # Interview service
-├── utils/              # Utility functions
-│   ├── __init__.py      # Package initialization
-│   ├── supabase.py      # Supabase integration
-│   └── validators.py    # Input validation
-└── requirements.txt      # Backend dependencies
+├── config/                # Configuration settings
+│   ├── __init__.py
+│   └── config.py
+├── routes/                # API routes
+│   ├── __init__.py
+│   ├── demo_requests.py   # Demo request endpoints
+│   └── interviews.py      # Interview management endpoints
+├── services/              # Business logic
+│   ├── __init__.py
+│   ├── demo_requests.py   # Demo request service
+│   └── interviews.py      # Interview service
+├── utils/                 # Utility functions
+│   ├── __init__.py
+│   ├── supabase.py        # Supabase integration
+│   └── validators.py      # Input validation
+├── tests/                 # Test files
+│   ├── __init__.py
+│   └── test_api.py        # API tests
+├── run_tests.sh           # Test runner script
+└── requirements.txt       # Backend dependencies
 ```
 
 ## Features
@@ -53,6 +62,7 @@ backend/
    ```bash
    python -m venv venv
    .\venv\Scripts\activate  # Windows
+   source venv/bin/activate  # macOS/Linux
    ```
 
 2. Install dependencies:
@@ -62,13 +72,25 @@ backend/
 
 3. Copy `.env.example` to `.env` and update the environment variables:
    ```bash
-   copy .env.example .env
+   cp .env.example .env
    ```
 
 4. Start the server:
    ```bash
    python app.py
    ```
+
+## Running Tests
+
+Run the tests using the test script:
+```bash
+./run_tests.sh
+```
+
+Or manually:
+```bash
+python -m pytest tests/
+```
 
 ## Environment Variables
 
@@ -90,10 +112,32 @@ The backend is configured with:
 - Python path configured for module imports
 - Error handling and logging
 
-## Contributing
+## Launch Instructions
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+To launch the entire application (both backend and frontend):
+
+1. Make sure all dependencies are installed:
+   ```bash
+   pip install -r requirements.txt
+   cd ../frontend
+   npm install
+   ```
+
+2. Use the provided shell script:
+   ```bash
+   chmod +x ../run_app.sh
+   ../run_app.sh
+   ```
+
+Or start each component separately:
+
+1. Start the backend:
+   ```bash
+   python app.py
+   ```
+
+2. Start the frontend (in another terminal):
+   ```bash
+   cd ../frontend
+   npm run dev
+   ```
