@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
@@ -34,8 +35,11 @@ export default function BookDemoPage() {
     try {
       setIsSubmitting(true);
       
+      // Use the environment variable API URL instead of hardcoded URL
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      
       // Send request to the Flask backend through the proxy
-      const response = await fetch('http://localhost:5000/api/demo-requests', {
+      const response = await fetch(`${apiUrl}/api/demo-requests`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
