@@ -1,4 +1,3 @@
-
 import { Calendar, Clock, MessageSquare } from 'lucide-react';
 import PageHeader from '@/components/shared/PageHeader';
 import DashboardMetricCard from '@/components/shared/DashboardMetricCard';
@@ -6,6 +5,7 @@ import InterviewCard, { InterviewCardProps } from '@/components/shared/Interview
 import { Card } from '@/components/ui/card';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 // Mock data
 const mockInterviews: Omit<InterviewCardProps, 'viewerRole' | 'onView' | 'onJoin'>[] = [
@@ -59,6 +59,7 @@ const preparationTips = [
 export default function IntervieweeDashboard() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const handleViewInterview = (id: string) => {
     navigate(`/interviewee/interviews/${id}`);
@@ -81,6 +82,18 @@ export default function IntervieweeDashboard() {
 
   return (
     <div className="space-y-8">
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold">Welcome, {user?.name || 'Interviewee'}!</h1>
+        </div>
+        <div className="text-gray-600">
+          {totalUpcoming > 0 
+            ? `You have ${totalUpcoming} upcoming ${totalUpcoming === 1 ? 'interview' : 'interviews'} this week`
+            : "No upcoming interviews scheduled"
+          }
+        </div>
+      </div>
+
       <PageHeader 
         title="My Dashboard" 
         description="Prepare for your interviews and track your progress"
@@ -101,65 +114,26 @@ export default function IntervieweeDashboard() {
           description="Past 30 days"
         />
         <DashboardMetricCard
-          title="Feedback Received"
-          value={totalCompleted}
+          title="Preparation Tips"
+          value={preparationTips.length}
           icon={<MessageSquare className="h-5 w-5" />}
-          description="Available to review"
+          description="Available tips"
         />
       </div>
 
-      {/* Next Interview */}
-      {nextInterviewDate && (
-        <div className="glass-panel rounded-lg p-4">
-          <h2 className="text-lg font-medium mb-2">Your Next Interview</h2>
-          <div className="grid grid-cols-1 gap-4">
-            {mockInterviews
-              .filter(i => i.status === 'scheduled')
-              .sort((a, b) => a.date.getTime() - b.date.getTime())
-              .slice(0, 1)
-              .map(interview => (
-                <InterviewCard
-                  key={interview.id}
-                  {...interview}
-                  viewerRole="interviewee"
-                  onView={handleViewInterview}
-                  onJoin={handleJoinInterview}
-                />
-              ))}
-          </div>
-        </div>
-      )}
-
-      {/* Interview Preparation */}
+      {/* Upcoming Interviews */}
       <div>
-        <h2 className="text-lg font-medium mb-4">Interview Preparation Tips</h2>
-        <Card className="p-4">
-          <ul className="space-y-2">
-            {preparationTips.map((tip, index) => (
-              <li key={index} className="flex items-start gap-2">
-                <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary/10 text-primary text-xs">
-                  {index + 1}
-                </span>
-                <span>{tip}</span>
-              </li>
-            ))}
-          </ul>
-        </Card>
-      </div>
-
-      {/* All Upcoming Interviews */}
-      <div>
-        <h2 className="text-lg font-medium mb-4">All Upcoming Interviews</h2>
+        <h2 className="text-xl font-semibold mb-4">Upcoming Interviews</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {mockInterviews
             .filter(i => i.status === 'scheduled')
-            .map(interview => (
+            .map((interview) => (
               <InterviewCard
                 key={interview.id}
                 {...interview}
                 viewerRole="interviewee"
-                onView={handleViewInterview}
-                onJoin={handleJoinInterview}
+                onView={() => handleViewInterview(interview.id)}
+                onJoin={() => handleJoinInterview(interview.id)}
               />
             ))}
         </div>
@@ -167,19 +141,30 @@ export default function IntervieweeDashboard() {
 
       {/* Past Interviews */}
       <div>
-        <h2 className="text-lg font-medium mb-4">Past Interviews</h2>
+        <h2 className="text-xl font-semibold mb-4">Past Interviews</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {mockInterviews
             .filter(i => i.status === 'completed')
-            .map(interview => (
+            .map((interview) => (
               <InterviewCard
                 key={interview.id}
                 {...interview}
                 viewerRole="interviewee"
-                onView={handleViewInterview}
-                onJoin={handleJoinInterview}
+                onView={() => handleViewInterview(interview.id)}
               />
             ))}
+        </div>
+      </div>
+
+      {/* Preparation Tips */}
+      <div>
+        <h2 className="text-xl font-semibold mb-4">Interview Preparation Tips</h2>
+        <div className="space-y-4">
+          {preparationTips.map((tip, index) => (
+            <Card key={index} className="p-4">
+              <p className="text-gray-700">{tip}</p>
+            </Card>
+          ))}
         </div>
       </div>
     </div>
