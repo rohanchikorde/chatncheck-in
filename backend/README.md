@@ -24,17 +24,20 @@ backend/
 ## Features
 
 - RESTful API endpoints for interview management
-- Demo request system
+- Demo request system with robust error handling
 - Supabase integration for data storage
 - Input validation and error handling
 - CORS support for frontend integration
 - Modular architecture with clear separation of concerns
+- Improved SSL handling for Supabase requests
+- Enhanced error logging and debugging
 
 ## API Endpoints
 
 ### Demo Requests
 
 - `POST /api/demo-requests` - Create a new demo request
+- `GET /api/demo-requests` - Get all demo requests
 
 ### Interviews
 

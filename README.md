@@ -35,6 +35,7 @@ This project is an interview platform that allows users to create demo requests 
 - **Error Handling**: Improved error handling in API requests to ensure consistent response formats, even when errors occur.
 - **Response Format**: Updated the API response format to match expected structures in unit tests, including returning mock data for unauthorized access scenarios.
 - **Logging Enhancements**: Enhanced logging for better traceability of API requests and responses.
+- **Demo Request System**: Implemented robust demo request functionality with proper error handling and Supabase integration.
 
 ## Getting Started
 
