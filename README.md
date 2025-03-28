@@ -8,23 +8,39 @@ A modern interview management platform built with React, Vite, and Flask.
 interview-platform/
 ├── frontend/           # React frontend application
 │   ├── src/           # Source code
+│   │   ├── components/ # React components
+│   │   ├── pages/     # Page components
+│   │   └── features/  # Feature-specific code
 │   ├── public/        # Static assets
 │   └── package.json   # Frontend dependencies
 ├── backend/           # Flask backend API
 │   ├── app.py         # Main application file
-│   ├── config.py      # Configuration settings
+│   ├── config/        # Configuration settings
+│   │   ├── __init__.py
+│   │   └── config.py
 │   ├── routes/        # API routes
 │   │   ├── demo_requests.py
-│   │   └── interviews.py
+│   │   ├── interviews.py
+│   │   └── __init__.py
 │   ├── services/      # Business logic
 │   │   ├── demo_requests.py
-│   │   └── interviews.py
+│   │   ├── interviews.py
+│   │   └── __init__.py
 │   ├── utils/         # Utility functions
 │   │   ├── __init__.py
 │   │   ├── supabase.py
 │   │   └── validators.py
-│   └── requirements.txt # Backend dependencies
-└── shared/            # Shared utilities and components
+│   ├── tests/         # Test files
+│   │   ├── __init__.py
+│   │   └── test_api.py
+│   ├── requirements.txt # Backend dependencies
+│   └── run_tests.sh    # Test runner script
+├── shared/            # Shared utilities and components
+│   ├── types/         # Shared TypeScript types
+│   ├── utils/         # Shared utility functions
+│   └── constants/     # Shared constants
+├── docs/             # Project documentation
+└── src/             # Root source directory
 ```
 
 ## Overview
