@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { BrowserRouter, Routes, Route, Outlet } from 'react-router-dom';
 import LandingPage from './pages/LandingPage';
@@ -21,6 +20,7 @@ import InterviewerInterviewsPage from './pages/interviewer/InterviewerInterviews
 import InterviewerFeedbackPage from './pages/interviewer/InterviewerFeedbackPage';
 import IntervieweeInterviewsPage from './pages/interviewee/IntervieweeInterviewsPage';
 import IntervieweeDashboard from './pages/interviewee/IntervieweeDashboard';
+import LoginPage from './pages/Login';
 import NotFound from './pages/NotFound';
 
 function App() {
@@ -31,6 +31,7 @@ function App() {
         <Route path="/book-demo" element={<BookDemoPage />} />
         <Route path="/request-demo" element={<RequestDemoPage />} />
         <Route path="/demo-scheduled" element={<DemoScheduledPage />} />
+        <Route path="/login" element={<LoginPage />} />
         
         {/* Solution pages */}
         <Route path="/solutions/enterprise" element={<EnterpriseSolutionsPage />} />
