@@ -8,23 +8,56 @@ A modern interview management platform built with React, Vite, and Flask.
 interview-platform/
 ├── frontend/           # React frontend application
 │   ├── src/           # Source code
+│   │   ├── App.tsx    # Root component
+│   │   ├── App.css    # Root styles
+│   │   ├── main.tsx   # Entry point
+│   │   ├── index.css  # Global styles
+│   │   ├── components/ # Reusable React components
+│   │   │   ├── ui/    # UI components (buttons, inputs, etc.)
+│   │   │   └── layout/ # Layout components (header, footer, etc.)
+│   │   ├── pages/     # Page components
+│   │   │   ├── BookDemoPage.tsx
+│   │   │   ├── DemoScheduledPage.tsx
+│   │   │   ├── LandingPage.tsx
+│   │   │   ├── RequestDemoPage.tsx
+│   │   │   ├── admin/ # Admin pages
+│   │   │   ├── interviewee/ # Interviewee pages
+│   │   │   ├── interviewer/ # Interviewer pages
+│   │   │   └── solutions/ # Solutions pages
+│   │   ├── features/  # Feature-specific code
+│   │   ├── hooks/     # Custom React hooks
+│   │   ├── integrations/ # Third-party integrations
+│   │   └── lib/       # Shared libraries and utilities
 │   ├── public/        # Static assets
 │   └── package.json   # Frontend dependencies
 ├── backend/           # Flask backend API
 │   ├── app.py         # Main application file
-│   ├── config.py      # Configuration settings
+│   ├── config/        # Configuration settings
+│   │   ├── __init__.py
+│   │   └── config.py
 │   ├── routes/        # API routes
 │   │   ├── demo_requests.py
-│   │   └── interviews.py
+│   │   ├── interviews.py
+│   │   └── __init__.py
 │   ├── services/      # Business logic
 │   │   ├── demo_requests.py
-│   │   └── interviews.py
+│   │   ├── interviews.py
+│   │   └── __init__.py
 │   ├── utils/         # Utility functions
 │   │   ├── __init__.py
 │   │   ├── supabase.py
 │   │   └── validators.py
-│   └── requirements.txt # Backend dependencies
-└── shared/            # Shared utilities and components
+│   ├── tests/         # Test files
+│   │   ├── __init__.py
+│   │   └── test_api.py
+│   ├── requirements.txt # Backend dependencies
+│   └── run_tests.sh    # Test runner script
+├── shared/            # Shared utilities and components
+│   ├── types/         # Shared TypeScript types
+│   ├── utils/         # Shared utility functions
+│   └── constants/     # Shared constants
+├── docs/             # Project documentation
+└── src/             # Root source directory
 ```
 
 ## Overview
