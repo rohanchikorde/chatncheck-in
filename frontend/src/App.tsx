@@ -16,6 +16,7 @@ import InterviewsPage from './pages/admin/InterviewsPage';
 import InterviewDetailPage from './pages/admin/InterviewDetailPage';
 import UsersPage from './pages/admin/UsersPage';
 import DemoRequestsPage from './pages/admin/DemoRequestsPage';
+import CompaniesPage from './pages/admin/CompaniesPage';
 import InterviewerDashboard from './pages/interviewer/InterviewerDashboard';
 import InterviewerInterviewsPage from './pages/interviewer/InterviewerInterviewsPage';
 import InterviewerFeedbackPage from './pages/interviewer/InterviewerFeedbackPage';
@@ -46,6 +47,7 @@ function App() {
           <Route path="interviews" element={<InterviewsPage />} />
           <Route path="interviews/:id" element={<InterviewDetailPage />} />
           <Route path="users" element={<UsersPage />} />
+          <Route path="companies" element={<CompaniesPage />} />
           <Route path="demo-requests" element={<DemoRequestsPage />} />
         </Route>
 

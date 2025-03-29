@@ -1,107 +1,106 @@
+
+import React from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { 
+  Building2, ChevronLeft, LayoutDashboard, 
+  Users, Calendar, FileText, MessageSquare, Settings, 
+  LogOut, Menu
+} from 'lucide-react';
 import {
-  LayoutDashboard,
-  Users,
-  Calendar,
-  CalendarPlus,
-  Settings,
-} from "lucide-react";
-import { NavLink } from "react-router-dom";
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarHeader,
+  SidebarTrigger,
+} from '@/components/ui/sidebar';
 
-interface SidebarProps {
-  role: string | undefined;
-}
+export default function AppSidebar() {
+  const location = useLocation();
+  const isAdminPath = location.pathname.startsWith('/admin');
+  const isInterviewerPath = location.pathname.startsWith('/interviewer');
+  const isIntervieweePath = location.pathname.startsWith('/interviewee');
 
-const SidebarItem = ({
-  icon,
-  label,
-  href,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  href: string;
-}) => {
+  let navigationItems = [
+    { path: '/admin/dashboard', label: 'Dashboard', icon: <LayoutDashboard size={18} /> },
+    { path: '/admin/interviews', label: 'Interviews', icon: <Calendar size={18} /> },
+    { path: '/admin/companies', label: 'Companies', icon: <Building2 size={18} /> },
+    { path: '/admin/users', label: 'Users', icon: <Users size={18} /> },
+    { path: '/admin/demo-requests', label: 'Demo Requests', icon: <FileText size={18} /> },
+  ];
+
+  if (isInterviewerPath) {
+    navigationItems = [
+      { path: '/interviewer/dashboard', label: 'Dashboard', icon: <LayoutDashboard size={18} /> },
+      { path: '/interviewer/interviews', label: 'My Interviews', icon: <Calendar size={18} /> },
+      { path: '/interviewer/feedback', label: 'Feedback', icon: <MessageSquare size={18} /> },
+    ];
+  } else if (isIntervieweePath) {
+    navigationItems = [
+      { path: '/interviewee/dashboard', label: 'Dashboard', icon: <LayoutDashboard size={18} /> },
+      { path: '/interviewee/interviews', label: 'My Interviews', icon: <Calendar size={18} /> },
+    ];
+  }
+
   return (
-    <li>
-      <NavLink
-        to={href}
-        className={({ isActive }) =>
-          `flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-secondary hover:text-foreground ${
-            isActive
-              ? "bg-secondary text-foreground"
-              : "text-muted-foreground"
-          }`
-        }
-      >
-        {icon}
-        {label}
-      </NavLink>
-    </li>
-  );
-};
+    <Sidebar className="border-r border-border">
+      <SidebarHeader className="border-b border-border">
+        <div className="flex items-center px-4 py-3">
+          <div className="flex w-full items-center justify-between">
+            <Link to="/" className="flex items-center gap-2">
+              <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-bold">
+                IP
+              </div>
+              <span className="text-xl font-semibold">Interview Platform</span>
+            </Link>
+            <SidebarTrigger asChild>
+              <button className="p-1 hover:bg-muted rounded-md lg:hidden">
+                <ChevronLeft className="h-4 w-4" />
+                <span className="sr-only">Toggle Menu</span>
+              </button>
+            </SidebarTrigger>
+          </div>
+        </div>
+      </SidebarHeader>
 
-const AppSidebar = ({ role }: SidebarProps) => {
-  return (
-    <div className="flex h-full select-none flex-col border-r bg-background">
-      <div className="px-4 py-6">
-        <span className="font-bold text-lg">InterviewPulse</span>
-      </div>
-      <div className="flex-1 overflow-y-auto py-2">
-        <nav className="grid gap-1 px-2 text-sm">
-          <SidebarItem
-            icon={<LayoutDashboard size={16} />}
-            label="Dashboard"
-            href="/admin/dashboard"
-          />
-          {role === "admin" && (
-            <>
-              <SidebarItem
-                icon={<Users size={16} />}
-                label="Users"
-                href="/admin/users"
-              />
-              <SidebarItem
-                icon={<Calendar size={16} />}
-                label="Interviews"
-                href="/admin/interviews"
-              />
-              <SidebarItem
-                icon={<CalendarPlus size={16} />}
-                label="Demo Requests"
-                href="/admin/demo-requests"
-              />
-            </>
-          )}
-
-          {role === "interviewer" && (
-            <>
-              <SidebarItem
-                icon={<Calendar size={16} />}
-                label="Interviews"
-                href="/interviewer/interviews"
-              />
-            </>
-          )}
-
-          {role === "interviewee" && (
-            <>
-              <SidebarItem
-                icon={<Calendar size={16} />}
-                label="Interviews"
-                href="/interviewee/interviews"
-              />
-            </>
-          )}
+      <SidebarContent className="py-4">
+        <div className="px-4 mb-2">
+          <h3 className="text-sm font-medium text-muted-foreground">
+            {isAdminPath ? 'Admin Portal' : isInterviewerPath ? 'Interviewer Portal' : 'Interviewee Portal'}
+          </h3>
+        </div>
+        <nav className="grid gap-1 px-2">
+          {navigationItems.map((item) => (
+            <Link
+              key={item.path}
+              to={item.path}
+              className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors
+                ${location.pathname === item.path ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
+            >
+              {item.icon}
+              {item.label}
+            </Link>
+          ))}
         </nav>
-      </div>
-      <div className="px-4 py-4">
-        <SidebarItem
-          icon={<Settings size={16} />}
-          label="Settings"
-          href="/settings"
-        />
-      </div>
-    </div>
-  );
-};
+      </SidebarContent>
 
-export default AppSidebar;
+      <SidebarFooter className="border-t border-border p-2">
+        <div className="grid gap-1">
+          <Link
+            to="/settings"
+            className="flex items-center gap-3 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            <Settings size={18} />
+            Settings
+          </Link>
+          <Link
+            to="/logout"
+            className="flex items-center gap-3 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-destructive hover:text-destructive-foreground"
+          >
+            <LogOut size={18} />
+            Logout
+          </Link>
+        </div>
+      </SidebarFooter>
+    </Sidebar>
+  );
+}
