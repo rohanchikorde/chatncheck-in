@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { BrowserRouter, Routes, Route, Outlet } from 'react-router-dom';
+import { Toaster } from "@/components/ui/toaster";
 import LandingPage from './pages/LandingPage';
 import BookDemoPage from './pages/BookDemoPage';
 import RequestDemoPage from './pages/RequestDemoPage';
@@ -68,6 +69,7 @@ function App() {
 
         <Route path="*" element={<NotFound />} />
       </Routes>
+      <Toaster />
     </BrowserRouter>
   );
 }
