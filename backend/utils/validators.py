@@ -1,4 +1,5 @@
 from datetime import datetime
+import re
 
 def validate_date(date_string):
     try:
@@ -26,3 +27,10 @@ def validate_time(time_string):
     
     except ValueError:
         return False, "Invalid time format. Use HH:MM (24-hour format)"
+
+def validate_email(email):
+    # Simple email validation using regex
+    email_regex = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    if re.match(email_regex, email):
+        return True, None
+    return False, "Invalid email format"

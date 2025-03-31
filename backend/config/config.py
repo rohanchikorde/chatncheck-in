@@ -10,8 +10,8 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 
 # Supabase configuration
-SUPABASE_URL = os.getenv('SUPABASE_URL', 'https://ehcobpmrrtdkebphqaui.supabase.co')
-SUPABASE_KEY = os.getenv('SUPABASE_KEY', '')
+SUPABASE_URL = os.getenv('SUPABASE_URL', 'https://igkehjzqgrahfxkwmhbc.supabase.co')
+SUPABASE_KEY = os.getenv('SUPABASE_KEY', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlna2VoanpxZ3JhaGZ4a3dtaGJjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE5NDU1MjEsImV4cCI6MjA1NzUyMTUyMX0.MOCLW0QA4wRoYtt3E9wXWd1RVcx2ceMRC_6qgEgIMng')
 STORAGE_BUCKET = 'interview-documents'
 
 # Validate Supabase configuration

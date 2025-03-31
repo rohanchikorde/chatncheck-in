@@ -11,6 +11,8 @@ from flask_cors import CORS
 from config import config
 from routes.demo_requests import demo_bp
 from routes.interviews import interview_bp
+from routes.auth import auth_bp
+from routes.test import test_bp
 
 app = Flask(__name__)
 CORS(app, origins=config.CORS_ORIGINS, headers=config.CORS_HEADERS, methods=config.CORS_METHODS)
@@ -18,11 +20,14 @@ CORS(app, origins=config.CORS_ORIGINS, headers=config.CORS_HEADERS, methods=conf
 # Register blueprints
 app.register_blueprint(demo_bp)
 app.register_blueprint(interview_bp)
+app.register_blueprint(auth_bp, url_prefix='/api/auth')
+app.register_blueprint(test_bp)
 
 # Handle OPTIONS requests for CORS preflight
 @app.route('/api/interviews', methods=['OPTIONS'])
 @app.route('/api/interviews/<interview_id>', methods=['OPTIONS'])
 @app.route('/api/demo-requests', methods=['OPTIONS'])
+@app.route('/api/auth/login', methods=['OPTIONS'])
 def handle_options(interview_id=None):
     return make_response('', 200)
 

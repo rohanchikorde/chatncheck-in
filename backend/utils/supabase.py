@@ -1,8 +1,12 @@
 import requests
 import logging
+import json
 from datetime import datetime
 import os
 from config import config
+from config.ssl_config import *
+from dotenv import load_dotenv
+import traceback
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -13,60 +17,83 @@ session = requests.Session()
 adapter = requests.adapters.HTTPAdapter(max_retries=3)
 session.mount('https://', adapter)
 
-def supabase_request(endpoint, method='GET', data=None, headers=None, files=None):
-    if headers is None:
-        headers = {}
+# Disable SSL verification globally for requests
+requests.packages.urllib3.disable_warnings()
+
+# Initialize Supabase client
+def init_supabase():
+    load_dotenv()
     
-    # Add Supabase headers
-    headers.update({
-        'apikey': config.SUPABASE_KEY,
-        'Authorization': f'Bearer {config.SUPABASE_KEY}',
-        'Content-Type': 'application/json' if method in ['POST', 'PUT'] else 'application/json'
-    })
+    supabase_url = os.getenv('SUPABASE_URL')
+    supabase_key = os.getenv('SUPABASE_KEY')
     
-    # Construct proper Supabase REST API URL
-    url = f"{config.SUPABASE_URL}/rest/v1/{endpoint}"
+    if not supabase_url or not supabase_key:
+        raise ValueError("Supabase URL or Key not found in environment variables")
     
+    return {
+        'url': supabase_url,
+        'key': supabase_key
+    }
+
+# Initialize Supabase client
+supabase_client = init_supabase()
+
+def supabase_request(endpoint, method='GET', data=None, params=None):
     try:
-        # Disable SSL verification for testing purposes
-        verify = False
-        if method == 'GET':
-            response = session.get(url, headers=headers, verify=verify)
-        elif method == 'POST':
-            if files:
-                response = session.post(url, headers=headers, data=data, files=files, verify=verify)
-            else:
-                response = session.post(url, headers=headers, json=data, verify=verify)
-        elif method == 'PUT':
-            response = session.put(url, headers=headers, json=data, verify=verify)
-        elif method == 'DELETE':
-            response = session.delete(url, headers=headers, verify=verify)
-        else:
-            raise ValueError(f"Unsupported HTTP method: {method}")
+        # Build full URL
+        url = f"{supabase_client['url']}/rest/v1/{endpoint.lstrip('/')}"
+        
+        # Prepare headers
+        headers = {
+            'apikey': supabase_client['key'],
+            'Authorization': f'Bearer {supabase_client["key"]}',
+            'Content-Type': 'application/json'
+        }
+        
+        # Log the request details
+        logger.info(f"Making Supabase request: {method} {url}")
+        logger.info(f"Headers: {headers}")
+        logger.info(f"Data: {data}")
+        logger.info(f"Params: {params}")
+        
+        # Make the request with SSL verification disabled
+        response = session.request(method, url, headers=headers, json=data, params=params, verify=False)
+        
+        # Log the response
+        logger.info(f"Response status: {response.status_code}")
+        logger.info(f"Response content: {response.text}")
+        
+        # Check if the response was successful
+        if response.status_code >= 200 and response.status_code < 300:
+            try:
+                response_data = response.json()
+                if isinstance(response_data, list) and len(response_data) == 1:
+                    response_data = response_data[0]
+            except json.JSONDecodeError:
+                response_data = None
             
-        response.raise_for_status()
-        return response
+            return {
+                'status_code': response.status_code,
+                'data': response_data,
+                'error': None
+            }
+        else:
+            # If the response was not successful, return an error
+            return {
+                'status_code': response.status_code,
+                'data': None,
+                'error': response.text
+            }
         
-    except requests.exceptions.RequestException as e:
-        logger.error("Supabase request failed: %s", str(e))
-        logger.error("URL: %s", url)
-        logger.error("Method: %s", method)
-        logger.error("Headers: %s", headers)
-        logger.error("Data: %s", data)
-        
-        # Create a mock response object with status_code and text attributes
-        class MockResponse:
-            def __init__(self, status_code, text):
-                self.status_code = status_code
-                self.text = text
-                
-            def json(self):
-                return {"error": self.text}
-        
-        # Return a proper error response object
-        if hasattr(e, 'response') and e.response is not None:
-            return MockResponse(e.response.status_code, e.response.text)
-        return MockResponse(500, f"Internal server error: {str(e)}")
+    except Exception as e:
+        logger.error(f"Supabase request failed: {str(e)}")
+        logger.error(f"Method: {method}")
+        logger.error(f"Data: {data}")
+        logger.error(f"Full traceback: {traceback.format_exc()}")
+        return {
+            'status_code': 500,
+            'error': str(e)
+        }
 
 def upload_file_to_supabase(file, candidate_name):
     """
