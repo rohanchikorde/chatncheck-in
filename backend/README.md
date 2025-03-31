@@ -10,14 +10,16 @@ backend/
 ├── config.py             # Configuration settings
 ├── routes/              # API routes
 │   ├── demo_requests.py  # Demo request endpoints
-│   └── interviews.py     # Interview management endpoints
+│   ├── interviews.py     # Interview management endpoints
+│   └── test.py          # Test endpoints
 ├── services/            # Business logic
 │   ├── demo_requests.py  # Demo request service
 │   └── interviews.py     # Interview service
 ├── utils/              # Utility functions
 │   ├── __init__.py      # Package initialization
 │   ├── supabase.py      # Supabase integration
-│   └── validators.py    # Input validation
+│   ├── validators.py    # Input validation
+│   └── ssl_config.py    # SSL configuration
 └── requirements.txt      # Backend dependencies
 ```
 
@@ -31,6 +33,11 @@ backend/
 - Modular architecture with clear separation of concerns
 - Improved SSL handling for Supabase requests
 - Enhanced error logging and debugging
+- Comprehensive test suite for API endpoints
+- Interviewer management with availability scheduling
+- Soft delete functionality for interviewers
+- Maximum interviews per day limit
+- Weekly availability scheduling
 
 ## API Endpoints
 
@@ -47,48 +54,73 @@ backend/
 - `PUT /api/interviews/:id` - Update an interview
 - `DELETE /api/interviews/:id` - Delete an interview
 
+### Interviewers (Admin)
+
+- `POST /admin/interviewers` - Create a new interviewer
+- `PUT /admin/interviewers/:id` - Update an interviewer
+- `DELETE /admin/interviewers/:id` - Delete an interviewer
+- `GET /admin/interviewers` - List all interviewers
+- `GET /admin/interviewers/:id` - Get a specific interviewer
+- `GET /admin/interviewers/:id/availability` - Get interviewer availability
+- `PUT /admin/interviewers/:id/availability` - Update interviewer availability
+
 ## Setup
 
-1. Create and activate a virtual environment:
-   ```bash
-   python -m venv venv
-   .\venv\Scripts\activate  # Windows
-   ```
-
-2. Install dependencies:
+1. Install dependencies:
    ```bash
    pip install -r requirements.txt
    ```
 
-3. Copy `.env.example` to `.env` and update the environment variables:
-   ```bash
-   copy .env.example .env
-   ```
+2. Set up environment variables:
+   - Create a `.env` file in the backend directory
+   - Add the following variables:
+     ```
+     SUPABASE_URL=your_supabase_url
+     SUPABASE_KEY=your_supabase_key
+     ```
 
-4. Start the server:
+3. Run the application:
    ```bash
    python app.py
    ```
 
-## Environment Variables
+4. Run tests:
+   ```bash
+   python test_supabase.py
+   ```
 
-```plaintext
-SUPABASE_URL=your_supabase_url
-SUPABASE_KEY=your_supabase_key
-FLASK_DEBUG=1
-FLASK_PORT=5000
-CORS_ORIGINS="*"
-CORS_HEADERS="Content-Type"
-CORS_METHODS="GET,POST,PUT,DELETE,OPTIONS"
-```
+## Testing
 
-## Development
+The project includes a comprehensive test suite for:
+- Supabase connection
+- Interviewer CRUD operations
+- Interviewer availability management
+- Error handling and response validation
 
-The backend is configured with:
-- Flask running in debug mode during development
-- CORS enabled for frontend integration
-- Python path configured for module imports
-- Error handling and logging
+## Error Handling
+
+The API implements robust error handling with:
+- Consistent error response format
+- Detailed error messages
+- Proper HTTP status codes
+- Retry mechanism for failed requests
+- SSL verification handling
+
+## Security
+
+- SSL/TLS encryption for all API requests
+- Secure Supabase authentication
+- Input validation for all endpoints
+- Rate limiting for API endpoints
+- CORS configuration for frontend integration
+
+## Logging
+
+The application includes comprehensive logging for:
+- API requests and responses
+- Error tracking
+- Performance monitoring
+- Security events
 
 ## Contributing
 

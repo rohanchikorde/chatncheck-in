@@ -20,6 +20,19 @@ def create_demo_request(data, method='POST'):
             logger.warning("Invalid email format")
             return None, 400, "Invalid email format"
 
+        # Validate phone number format
+        if 'phone_number' in data:
+            # Phone number should be at least 10 digits and start with +
+            if not re.match(r'^\+\d{10,}$', data['phone_number']):
+                logger.warning("Invalid phone number format")
+                return None, 400, "Invalid phone number format"
+
+        # Validate service interest
+        valid_interests = ['Job Interview', 'Career Coaching', 'Technical Assessment']
+        if 'service_interest' in data and data['service_interest'] not in valid_interests:
+            logger.warning("Invalid service interest")
+            return None, 400, f"Invalid service interest. Valid options are: {', '.join(valid_interests)}"
+
         # Prepare data for Supabase
         demo_request_data = {
             'first_name': data.get('first_name'),
@@ -38,25 +51,12 @@ def create_demo_request(data, method='POST'):
             logger.error("Failed to process request")
             return None, 500, "Failed to process request"
             
-        if response.status_code == 201 or response.status_code == 200:
-            logger.info("Request processed successfully")
-            try:
-                return response.json(), response.status_code, "Request processed successfully"
-            except Exception as e:
-                logger.warning(f"Could not parse JSON response: {e}")
-                mock_response = {
-                    'id': '123e4567-e89b-12d3-a456-426614174000',
-                    'first_name': data.get('first_name'),
-                    'last_name': data.get('last_name'),
-                    'work_email': data.get('work_email'),
-                    'phone_number': data.get('phone_number'),
-                    'service_interest': data.get('service_interest'),
-                    'message': data.get('message')
-                }
-                return mock_response, 201, "Request processed successfully"
+        if response.get('status_code') == 201:
+            logger.info("Demo request created successfully")
+            return response.get('data', {}), 201, "Demo request created successfully"
         else:
-            logger.error(f"Error from Supabase: {response.text}")
-            return None, response.status_code, response.text
+            logger.error(f"Error from Supabase: {response}")
+            return None, 500, "Failed to process request"
 
     except Exception as e:
         logger.exception("Internal server error")

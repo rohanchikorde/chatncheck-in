@@ -22,6 +22,7 @@ import IntervieweeInterviewsPage from './pages/interviewee/IntervieweeInterviews
 import IntervieweeDashboard from './pages/interviewee/IntervieweeDashboard';
 import LoginPage from './pages/Login';
 import NotFound from './pages/NotFound';
+import TestAPI from './components/TestAPI';
 import { AuthProvider } from './contexts/AuthContext';
 
 function App() {
@@ -66,6 +67,8 @@ function App() {
             <Route path="dashboard" element={<IntervieweeDashboard />} />
             <Route path="interviews" element={<IntervieweeInterviewsPage />} />
           </Route>
+
+          <Route path="/test" element={<TestAPI />} />
 
           <Route path="*" element={<NotFound />} />
         </Routes>
