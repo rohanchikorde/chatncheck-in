@@ -1,9 +1,11 @@
+
 import {
   LayoutDashboard,
   Users,
   Calendar,
   CalendarPlus,
   Settings,
+  Building,
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 
@@ -68,6 +70,11 @@ const AppSidebar = ({ role }: SidebarProps) => {
                 icon={<CalendarPlus size={16} />}
                 label="Demo Requests"
                 href="/admin/demo-requests"
+              />
+              <SidebarItem
+                icon={<Building size={16} />}
+                label="Companies"
+                href="/admin/companies"
               />
             </>
           )}
