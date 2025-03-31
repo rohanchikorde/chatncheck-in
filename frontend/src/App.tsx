@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { BrowserRouter, Routes, Route, Outlet } from 'react-router-dom';
 import LandingPage from './pages/LandingPage';
@@ -15,6 +16,8 @@ import InterviewsPage from './pages/admin/InterviewsPage';
 import InterviewDetailPage from './pages/admin/InterviewDetailPage';
 import UsersPage from './pages/admin/UsersPage';
 import DemoRequestsPage from './pages/admin/DemoRequestsPage';
+import CompaniesPage from './pages/admin/CompaniesPage';
+import CompanyDashboard from './pages/admin/CompanyDashboard';
 import InterviewerDashboard from './pages/interviewer/InterviewerDashboard';
 import InterviewerInterviewsPage from './pages/interviewer/InterviewerInterviewsPage';
 import InterviewerFeedbackPage from './pages/interviewer/InterviewerFeedbackPage';
@@ -24,6 +27,7 @@ import LoginPage from './pages/Login';
 import NotFound from './pages/NotFound';
 import TestAPI from './components/TestAPI';
 import { AuthProvider } from './contexts/AuthContext';
+import { Toaster } from './components/ui/toaster';
 
 function App() {
   return (
@@ -51,6 +55,8 @@ function App() {
             <Route path="interviews/:id" element={<InterviewDetailPage />} />
             <Route path="users" element={<UsersPage />} />
             <Route path="demo-requests" element={<DemoRequestsPage />} />
+            <Route path="companies" element={<CompaniesPage />} />
+            <Route path="companies/:companyId" element={<CompanyDashboard />} />
           </Route>
 
           {/* Interviewer routes */}
@@ -72,6 +78,7 @@ function App() {
 
           <Route path="*" element={<NotFound />} />
         </Routes>
+        <Toaster />
       </BrowserRouter>
     </AuthProvider>
   );

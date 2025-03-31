@@ -1,3 +1,4 @@
+
 # Interview Platform
 
 A modern interview management platform built with React, Vite, and Flask.
@@ -63,7 +64,20 @@ interview-platform/
 ## Overview
 This project is an interview platform that allows users to create demo requests and retrieve them from a Supabase backend.
 
+## Company Persona
+
+- **Company Name**: HireSync Solutions
+- **Industry**: Tech Recruitment
+- **Size**: Mid-sized (200 employees)
+- **Goals**: Streamline the hiring process, reduce time-to-hire by 30%, and improve collaboration between HR and engineering teams.
+- **Pain Points**: Manual scheduling leads to double-booked interviewers, lack of centralized tracking for demo requests, and difficulty scaling hiring as the company grows.
+- **Key Users**: 
+  - HR Manager (oversees all hiring activities and approves demo requests).
+  - Recruiter (schedules interviews and tracks candidate progress).
+  - Team Lead (reviews interviewer feedback and participates in interviews).
+
 ## Recent Changes
+- **Company Admin Dashboard**: Added a detailed company admin dashboard for HireSync Solutions with analytics, activity tracking, and demo request management.
 - **Supabase Connection**: Fixed SSL certificate verification issues by temporarily disabling SSL verification for testing purposes.
 - **Error Handling**: Improved error handling in API requests to ensure consistent response formats, even when errors occur.
 - **Response Format**: Updated the API response format to match expected structures in unit tests, including returning mock data for unauthorized access scenarios.
@@ -139,6 +153,7 @@ The backend is built with:
 - API proxy configuration
 - Supabase integration
 - Automated testing
+- Company admin dashboard with analytics
 
 ## Contributing
 
