@@ -3,8 +3,6 @@ import logging
 import json
 from datetime import datetime
 import os
-from config import config
-from config.ssl_config import *
 from dotenv import load_dotenv
 import traceback
 
@@ -20,19 +18,22 @@ session.mount('https://', adapter)
 # Disable SSL verification globally for requests
 requests.packages.urllib3.disable_warnings()
 
+# Load environment variables
+load_dotenv()
+
+# Get Supabase credentials from environment variables
+SUPABASE_URL = os.getenv('SUPABASE_URL')
+SUPABASE_KEY = os.getenv('SUPABASE_KEY')
+STORAGE_BUCKET = os.getenv('STORAGE_BUCKET')
+
+if not SUPABASE_URL or not SUPABASE_KEY or not STORAGE_BUCKET:
+    raise ValueError("Supabase URL, KEY and STORAGE_BUCKET must be set in environment variables")
+
 # Initialize Supabase client
 def init_supabase():
-    load_dotenv()
-    
-    supabase_url = os.getenv('SUPABASE_URL')
-    supabase_key = os.getenv('SUPABASE_KEY')
-    
-    if not supabase_url or not supabase_key:
-        raise ValueError("Supabase URL or Key not found in environment variables")
-    
     return {
-        'url': supabase_url,
-        'key': supabase_key
+        'url': SUPABASE_URL,
+        'key': SUPABASE_KEY
     }
 
 # Initialize Supabase client
@@ -113,16 +114,16 @@ def upload_file_to_supabase(file, candidate_name):
         file_name = f"{candidate_name}_{timestamp}{file_extension}"
         
         # Upload file to storage
-        url = f"{config.SUPABASE_URL}/storage/v1/object/{config.STORAGE_BUCKET}/{file_name}"
+        url = f"{supabase_client['url']}/storage/v1/object/{STORAGE_BUCKET}/{file_name}"
         response = supabase_request(
-            f"/storage/v1/object/{config.STORAGE_BUCKET}/{file_name}",
+            f"/storage/v1/object/{STORAGE_BUCKET}/{file_name}",
             method='POST',
             data=file.read(),
             headers={'Content-Type': file.content_type}
         )
         
         # Get public URL
-        public_url = f"{config.SUPABASE_URL}/storage/v1/object/public/{config.STORAGE_BUCKET}/{file_name}"
+        public_url = f"{supabase_client['url']}/storage/v1/object/public/{STORAGE_BUCKET}/{file_name}"
         return public_url
         
     except Exception as e:

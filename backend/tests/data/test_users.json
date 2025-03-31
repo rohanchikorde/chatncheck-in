@@ -1,0 +1,24 @@
+{
+  "admin": {
+    "email": "admin@example.com",
+    "password": "Admin123!",
+    "role": "admin",
+    "name": "Admin User"
+  },
+  "regular": {
+    "email": "user@example.com",
+    "password": "User123!",
+    "role": "user",
+    "name": "Regular User"
+  },
+  "invalid": {
+    "email": "invalid@example.com",
+    "password": "Wrong123!"
+  },
+  "frontend": {
+    "email": "frontend@example.com",
+    "password": "Frontend123!",
+    "role": "frontend",
+    "name": "Frontend Developer"
+  }
+}

@@ -1,4 +1,3 @@
-
 # Interview Platform
 
 A modern interview management platform built with React, Vite, and Flask.
@@ -62,7 +61,35 @@ interview-platform/
 ```
 
 ## Overview
-This project is an interview platform that allows users to create demo requests and retrieve them from a Supabase backend.
+This project is an interview management platform that provides comprehensive tools for managing interviews, interviewers, and analytics.
+
+### Key Features
+
+#### Admin Dashboard
+- Interviewer Management:
+  - Create, read, update, and delete interviewers
+  - Manage weekly availability schedules
+  - Set maximum interviews per day
+  - Soft delete functionality
+
+- Analytics:
+  - Track interview completion rates
+  - Analyze feedback ratings
+  - Monitor interviewer performance
+  - View job role distribution
+  - Analyze time slot usage
+
+- Schedule Management:
+  - Detect overlapping interviews
+  - Monitor daily interview limits
+  - Check weekly availability
+  - Bulk rescheduling capabilities
+
+#### Technical Stack
+- Frontend: React, TypeScript, Vite
+- Backend: Python, Flask
+- Database: Supabase
+- Styling: Tailwind CSS, Radix UI
 
 ## Company Persona
 
@@ -76,14 +103,6 @@ This project is an interview platform that allows users to create demo requests 
   - Recruiter (schedules interviews and tracks candidate progress).
   - Team Lead (reviews interviewer feedback and participates in interviews).
 
-## Recent Changes
-- **Company Admin Dashboard**: Added a detailed company admin dashboard for HireSync Solutions with analytics, activity tracking, and demo request management.
-- **Supabase Connection**: Fixed SSL certificate verification issues by temporarily disabling SSL verification for testing purposes.
-- **Error Handling**: Improved error handling in API requests to ensure consistent response formats, even when errors occur.
-- **Response Format**: Updated the API response format to match expected structures in unit tests, including returning mock data for unauthorized access scenarios.
-- **Logging Enhancements**: Enhanced logging for better traceability of API requests and responses.
-- **Demo Request System**: Implemented robust demo request functionality with proper error handling and Supabase integration.
-
 ## Getting Started
 
 ### Prerequisites
@@ -91,27 +110,38 @@ This project is an interview platform that allows users to create demo requests 
 - Node.js (v18 or higher)
 - Python 3.8+
 - npm or yarn
+- Supabase account
 
 ### Installation
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/interview-platform.git
-cd interview-platform
+git clone https://github.com/rohanchikorde/chatncheck-in.git
+cd chatncheck-in
 ```
 
-2. Install dependencies:
+2. Set up environment variables:
+Create a `.env` file in the backend directory with:
+```
+SUPABASE_URL=your_supabase_url
+SUPABASE_KEY=your_supabase_key
+FLASK_DEBUG=True
+FLASK_PORT=5000
+CORS_ORIGINS=*
+```
+
+3. Install dependencies:
 ```bash
-# Install frontend dependencies
-cd frontend
-npm install
-
-# Install backend dependencies
-cd ../backend
+# Backend
+cd backend
 pip install -r requirements.txt
+
+# Frontend
+cd ../frontend
+npm install
 ```
 
-3. Start the development servers:
+4. Start the servers:
 ```bash
 # Start backend server (in one terminal)
 cd backend
@@ -121,6 +151,25 @@ python app.py
 cd frontend
 npm run dev
 ```
+
+### Testing
+
+1. Run backend tests:
+```bash
+cd backend
+python -m pytest
+```
+
+2. Test API endpoints:
+```bash
+cd backend
+curl -X POST http://127.0.0.1:5000/api/auth/login -H "Content-Type: application/json" -d '{"email": "admin@example.com", "password": "Admin123!"}'
+```
+
+### Test Users
+- Admin: admin@example.com / Admin123!
+- User: user@example.com / User123!
+- Frontend Developer: frontend@example.com / Frontend123!
 
 ## Development
 

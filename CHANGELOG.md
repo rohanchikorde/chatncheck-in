@@ -48,6 +48,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Improved Supabase request response handling
 - Updated test cases for better error handling and status code checks
 
+## [1.2.0] - 2025-03-31
+
+### Added
+- Implemented comprehensive admin features:
+  - Interviewer management (CRUD operations)
+  - Weekly availability scheduling
+  - Maximum interviews per day limit
+  - Soft delete functionality
+- Advanced analytics dashboard:
+  - Interview completion rates
+  - Feedback rating analysis
+  - Interviewer performance metrics
+  - Job role distribution
+  - Time slot analysis
+- Schedule management tools:
+  - Conflict detection for overlapping interviews
+  - Daily interview limit monitoring
+  - Weekly availability checks
+  - Bulk rescheduling functionality
+
+### Changed
+- Updated data model to support new features:
+  - Added availability (JSON) to Interviewer model
+  - Added max_interviews_per_day limit
+  - Added active status for soft delete
+  - Added created_at timestamp
+- Enhanced CORS configuration for better frontend integration
+- Updated API endpoints to support new admin features:
+  - POST /admin/interviewers
+  - PUT /admin/interviewers/<id>
+  - DELETE /admin/interviewers/<id>
+  - GET /admin/analytics
+  - GET /admin/schedule/conflicts
+  - POST /admin/interviews/reschedule
+
+### Fixed
+- Resolved SSL certificate verification issues for local development
+- Improved frontend-backend connection handling
+- Enhanced error handling for API requests
+- Fixed CORS configuration warnings
+
 ## [1.1.0] - 2025-03-25
 
 ### Changed
@@ -125,6 +166,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Configuration file organization
 
 [Unreleased]: https://github.com/rohanchikorde/chatncheck-in/compare/v0.1.0...HEAD
+[1.2.0]: https://github.com/rohanchikorde/chatncheck-in/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/rohanchikorde/chatncheck-in/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/rohanchikorde/chatncheck-in/compare/v0.1.0...v1.0.0
 [0.1.0]: https://github.com/rohanchikorde/chatncheck-in/compare/v0.0.0...v0.1.0
