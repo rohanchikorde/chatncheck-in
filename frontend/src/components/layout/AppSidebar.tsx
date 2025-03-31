@@ -8,9 +8,10 @@ import {
   Building,
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface SidebarProps {
-  role: string | undefined;
+  role?: string;
 }
 
 const SidebarItem = ({
@@ -42,6 +43,9 @@ const SidebarItem = ({
 };
 
 const AppSidebar = ({ role }: SidebarProps) => {
+  const auth = useAuth();
+  const userRole = role || auth.user?.role;
+
   return (
     <div className="flex h-full select-none flex-col border-r bg-background">
       <div className="px-4 py-6">
@@ -54,7 +58,7 @@ const AppSidebar = ({ role }: SidebarProps) => {
             label="Dashboard"
             href="/admin/dashboard"
           />
-          {role === "admin" && (
+          {userRole === "admin" && (
             <>
               <SidebarItem
                 icon={<Users size={16} />}
@@ -79,7 +83,7 @@ const AppSidebar = ({ role }: SidebarProps) => {
             </>
           )}
 
-          {role === "interviewer" && (
+          {userRole === "interviewer" && (
             <>
               <SidebarItem
                 icon={<Calendar size={16} />}
@@ -89,7 +93,7 @@ const AppSidebar = ({ role }: SidebarProps) => {
             </>
           )}
 
-          {role === "interviewee" && (
+          {userRole === "interviewee" && (
             <>
               <SidebarItem
                 icon={<Calendar size={16} />}
