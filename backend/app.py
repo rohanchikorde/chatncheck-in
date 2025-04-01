@@ -1,5 +1,10 @@
 import sys
 import os
+from flask import request
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
 
 # Add the project root directory to Python path
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -28,6 +33,7 @@ app.register_blueprint(test_bp)
 @app.route('/api/interviews/<interview_id>', methods=['OPTIONS'])
 @app.route('/api/demo-requests', methods=['OPTIONS'])
 @app.route('/api/auth/login', methods=['OPTIONS'])
+@app.route('/api/auth/register', methods=['OPTIONS'])
 def handle_options(interview_id=None):
     return make_response('', 200)
 
