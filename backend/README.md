@@ -9,10 +9,14 @@ backend/
 ├── app.py                 # Main application file
 ├── config.py             # Configuration settings
 ├── routes/              # API routes
+│   ├── auth.py          # Authentication endpoints
+│   ├── companies.py     # Company management endpoints
 │   ├── demo_requests.py  # Demo request endpoints
 │   ├── interviews.py     # Interview management endpoints
 │   └── test.py          # Test endpoints
 ├── services/            # Business logic
+│   ├── auth.py          # Authentication service
+│   ├── companies.py     # Company management service
 │   ├── demo_requests.py  # Demo request service
 │   └── interviews.py     # Interview service
 ├── utils/              # Utility functions
@@ -63,6 +67,220 @@ backend/
 - `GET /admin/interviewers/:id` - Get a specific interviewer
 - `GET /admin/interviewers/:id/availability` - Get interviewer availability
 - `PUT /admin/interviewers/:id/availability` - Update interviewer availability
+
+## Authentication API
+
+### User Registration
+
+- **Endpoint**: `POST /api/auth/register`
+- **Description**: Register a new user
+- **Request Body**:
+  ```json
+  {
+    "email": "string",
+    "password": "string",
+    "full_name": "string",
+    "phone_number": "string",
+    "role": "string"
+  }
+  ```
+- **Response**:
+  ```json
+  {
+    "id": "string",
+    "email": "string",
+    "full_name": "string",
+    "phone_number": "string",
+    "role": "string",
+    "created_at": "timestamp",
+    "updated_at": "timestamp"
+  }
+  ```
+
+### User Login
+
+- **Endpoint**: `POST /api/auth/login`
+- **Description**: Authenticate user and get JWT token
+- **Request Body**:
+  ```json
+  {
+    "email": "string",
+    "password": "string"
+  }
+  ```
+- **Response**:
+  ```json
+  {
+    "access_token": "string",  // JWT token
+    "user": {
+      "id": "string",
+      "email": "string",
+      "full_name": "string",
+      "phone_number": "string",
+      "role": "string"
+    }
+  }
+  ```
+
+## Companies API
+
+### Create Company
+
+- **Endpoint**: `POST /api/companies`
+- **Description**: Create a new company
+- **Headers**:
+  ```
+  Authorization: Bearer <JWT_TOKEN>
+  Content-Type: application/json
+  ```
+- **Request Body**:
+  ```json
+  {
+    "name": "string",  // Required
+    "description": "string",
+    "industry": "string",
+    "website": "string",
+    "address": "string",
+    "logo_url": "string"
+  }
+  ```
+- **Response**:
+  ```json
+  {
+    "id": "integer",
+    "name": "string",
+    "description": "string",
+    "industry": "string",
+    "website": "string",
+    "address": "string",
+    "logo_url": "string",
+    "created_at": "timestamp",
+    "updated_at": "timestamp",
+    "is_active": "boolean"
+  }
+  ```
+
+### Get Company
+
+- **Endpoint**: `GET /api/companies/:id`
+- **Description**: Get a company by ID
+- **Headers**:
+  ```
+  Authorization: Bearer <JWT_TOKEN>
+  ```
+- **Response**:
+  ```json
+  {
+    "id": "integer",
+    "name": "string",
+    "description": "string",
+    "industry": "string",
+    "website": "string",
+    "address": "string",
+    "logo_url": "string",
+    "created_at": "timestamp",
+    "updated_at": "timestamp",
+    "is_active": "boolean"
+  }
+  ```
+
+### List Companies
+
+- **Endpoint**: `GET /api/companies`
+- **Description**: List all companies with pagination
+- **Headers**:
+  ```
+  Authorization: Bearer <JWT_TOKEN>
+  ```
+- **Query Parameters**:
+  ```
+  page: number  // Default: 1
+  per_page: number  // Default: 10
+  ```
+- **Response**:
+  ```json
+  {
+    "companies": [
+      {
+        "id": "integer",
+        "name": "string",
+        "description": "string",
+        "industry": "string",
+        "website": "string",
+        "address": "string",
+        "logo_url": "string",
+        "created_at": "timestamp",
+        "updated_at": "timestamp",
+        "is_active": "boolean"
+      }
+    ],
+    "total": "integer",
+    "page": "integer",
+    "per_page": "integer"
+  }
+  ```
+
+### Update Company
+
+- **Endpoint**: `PUT /api/companies/:id`
+- **Description**: Update an existing company
+- **Headers**:
+  ```
+  Authorization: Bearer <JWT_TOKEN>
+  Content-Type: application/json
+  ```
+- **Request Body**:
+  ```json
+  {
+    "name": "string",
+    "description": "string",
+    "industry": "string",
+    "website": "string",
+    "address": "string",
+    "logo_url": "string"
+  }
+  ```
+- **Response**:
+  ```json
+  {
+    "id": "integer",
+    "name": "string",
+    "description": "string",
+    "industry": "string",
+    "website": "string",
+    "address": "string",
+    "logo_url": "string",
+    "created_at": "timestamp",
+    "updated_at": "timestamp",
+    "is_active": "boolean"
+  }
+  ```
+
+### Delete Company
+
+- **Endpoint**: `DELETE /api/companies/:id`
+- **Description**: Delete a company by ID
+- **Headers**:
+  ```
+  Authorization: Bearer <JWT_TOKEN>
+  ```
+- **Response**: Empty response with status 204
+
+## Error Responses
+
+All endpoints may return error responses with the following structure:
+
+```json
+{
+  "error": "string"
+}
+```
+
+Common error codes:
+- 400: Bad Request (invalid input)
+- 401: Unauthorized (invalid or missing token)
+- 404: Not Found (resource not found)
+- 500: Internal Server Error
 
 ## Setup
 

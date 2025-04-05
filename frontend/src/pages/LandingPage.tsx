@@ -161,7 +161,7 @@ export default function LandingPage() {
               variant="outline"
               onClick={() => navigate('/login')}
             >
-              Login
+              Login1
             </Button>
             <Button
               className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700"

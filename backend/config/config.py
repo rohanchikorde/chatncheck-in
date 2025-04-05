@@ -1,6 +1,7 @@
 import os
 from dotenv import load_dotenv
 import logging
+from supabase import create_client
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -10,9 +11,12 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 
 # Supabase configuration
-SUPABASE_URL = os.getenv('SUPABASE_URL', 'https://igkehjzqgrahfxkwmhbc.supabase.co')
-SUPABASE_KEY = os.getenv('SUPABASE_KEY', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlna2VoanpxZ3JhaGZ4a3dtaGJjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE5NDU1MjEsImV4cCI6MjA1NzUyMTUyMX0.MOCLW0QA4wRoYtt3E9wXWd1RVcx2ceMRC_6qgEgIMng')
+SUPABASE_URL = os.getenv('SUPABASE_URL', 'https://pnhwhamhqslmqkvsfmth.supabase.co')
+SUPABASE_KEY = os.getenv('SUPABASE_SERVICE_ROLE_KEY', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBuaHdoYW1ocXNsbXFrdnNmbXRoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDMxNzcxOTcsImV4cCI6MjA1ODc1MzE5N30.m0lgFeD5Py7nyelAwXgBGZ9LGK9qQXrs1xc6YY8SAJ8')
 STORAGE_BUCKET = 'interview-documents'
+
+# Initialize Supabase client
+supabase_client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # Validate Supabase configuration
 if not SUPABASE_URL:
@@ -20,8 +24,8 @@ if not SUPABASE_URL:
     raise ValueError("SUPABASE_URL must be configured")
 
 if not SUPABASE_KEY:
-    logger.error("SUPABASE_KEY is not configured")
-    raise ValueError("SUPABASE_KEY must be configured")
+    logger.error("SUPABASE_SERVICE_ROLE_KEY is not configured")
+    raise ValueError("SUPABASE_SERVICE_ROLE_KEY must be configured")
 
 # Flask configuration
 FLASK_DEBUG = os.getenv('FLASK_DEBUG', 'True') == 'True'

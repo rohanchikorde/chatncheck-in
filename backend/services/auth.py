@@ -6,17 +6,22 @@ logger = logging.getLogger(__name__)
 def authenticate_user(email: str, password: str):
     try:
         # Query Supabase for user with matching email
+
+        print("Calling authenticate_user", email, password)
+
         response = supabase_request(
-            endpoint='/rest/v1/users',
+            endpoint='/rest/v1/auth/v1/users',  # Ensure this is correct
             method='GET',
             params={
                 'email': email
             }
         )
+
+        print("Response from authenticate_user", response)
         
         if not response.get('data'):
             return None
-            
+
         users = response['data']
         if not users:
             return None

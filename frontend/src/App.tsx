@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { BrowserRouter, Routes, Route, Outlet } from 'react-router-dom';
 import LandingPage from './pages/LandingPage';
@@ -24,6 +23,7 @@ import InterviewerFeedbackPage from './pages/interviewer/InterviewerFeedbackPage
 import IntervieweeInterviewsPage from './pages/interviewee/IntervieweeInterviewsPage';
 import IntervieweeDashboard from './pages/interviewee/IntervieweeDashboard';
 import LoginPage from './pages/Login';
+import RegisterPage from './pages/Register';
 import NotFound from './pages/NotFound';
 import TestAPI from './components/TestAPI';
 import { AuthProvider } from './contexts/AuthContext';
@@ -39,6 +39,7 @@ function App() {
           <Route path="/request-demo" element={<RequestDemoPage />} />
           <Route path="/demo-scheduled" element={<DemoScheduledPage />} />
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
           
           {/* Solution pages */}
           <Route path="/solutions/enterprise" element={<EnterpriseSolutionsPage />} />

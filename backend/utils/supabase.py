@@ -40,8 +40,18 @@ supabase_client = init_supabase()
 
 def supabase_request(endpoint, method='GET', data=None, params=None):
     try:
+        print("------------------------------")
+        print("Calling supabase_request")
+        print("Endpoint", endpoint)
+        print("Method", method)
+        print("Data", data)
+        print("Params", params)
+        print("------------------------------")
+
         # Build full URL
         url = f"{supabase_client['url']}/rest/v1/{endpoint.lstrip('/')}"
+
+        print("Full URL", url)
         
         # Prepare headers
         headers = {
@@ -58,10 +68,15 @@ def supabase_request(endpoint, method='GET', data=None, params=None):
         
         # Make the request with SSL verification disabled
         response = session.request(method, url, headers=headers, json=data, params=params, verify=False)
+
+        print("Response", response)
         
         # Log the response
         logger.info(f"Response status: {response.status_code}")
         logger.info(f"Response content: {response.text}")
+
+        print("Response status code", response.status_code)
+        print("Response content", response.text)
         
         # Check if the response was successful
         if response.status_code >= 200 and response.status_code < 300:
@@ -86,6 +101,7 @@ def supabase_request(endpoint, method='GET', data=None, params=None):
             }
         
     except Exception as e:
+        print("Exception in supabase_request", e)
         logger.error(f"Supabase request failed: {str(e)}")
         logger.error(f"Method: {method}")
         logger.error(f"Data: {data}")
