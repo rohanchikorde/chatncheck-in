@@ -26,6 +26,7 @@ import IntervieweeDashboard from './pages/interviewee/IntervieweeDashboard';
 import LoginPage from './pages/Login';
 import NotFound from './pages/NotFound';
 import TestAPI from './components/TestAPI';
+import BackendHealthCheck from './components/BackendHealthCheck';
 import { AuthProvider } from './contexts/AuthContext';
 import { Toaster } from './components/ui/toaster';
 
@@ -78,6 +79,7 @@ function App() {
 
           <Route path="*" element={<NotFound />} />
         </Routes>
+        <BackendHealthCheck />
         <Toaster />
       </BrowserRouter>
     </AuthProvider>

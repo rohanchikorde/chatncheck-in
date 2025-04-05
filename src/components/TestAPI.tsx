@@ -6,6 +6,7 @@ const TestAPI: React.FC = () => {
   const [testData, setTestData] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [retryCount, setRetryCount] = useState<number>(0);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -43,7 +44,11 @@ const TestAPI: React.FC = () => {
     };
 
     fetchTest();
-  }, [toast]);
+  }, [toast, retryCount]);
+
+  const handleRetry = () => {
+    setRetryCount(prev => prev + 1);
+  };
 
   return (
     <div className="p-6 max-w-2xl mx-auto bg-white rounded-lg shadow-md">
@@ -51,10 +56,18 @@ const TestAPI: React.FC = () => {
       
       {isLoading && <p className="text-gray-600">Loading data...</p>}
       
-      {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4" role="alert">
-        <p className="font-bold">Error:</p>
-        <p>{error}</p>
-      </div>}
+      {error && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4" role="alert">
+          <p className="font-bold">Error:</p>
+          <p>{error}</p>
+          <button 
+            onClick={handleRetry}
+            className="mt-2 bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-3 rounded"
+          >
+            Retry
+          </button>
+        </div>
+      )}
       
       {testData && (
         <div className="mt-4">
