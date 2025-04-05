@@ -1,9 +1,8 @@
-
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { CheckCircle, Users, ArrowRight, BarChart } from 'lucide-react';
+import { CheckCircle, Users, ArrowRight, BarChart, Zap } from 'lucide-react';
 import PageHeader from '@/components/shared/PageHeader';
 
 export default function StaffingSolutionsPage() {
@@ -18,8 +17,10 @@ export default function StaffingSolutionsPage() {
   ];
 
   return (
+    
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
       <header className="border-b border-border/40 backdrop-blur-sm">
+        
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-md bg-gradient-to-r from-indigo-500 to-purple-600 flex items-center justify-center">
@@ -46,6 +47,7 @@ export default function StaffingSolutionsPage() {
 
       <main className="container mx-auto px-4 py-12">
         <div className="flex flex-col md:flex-row gap-8 items-center mb-16">
+          
           <div className="md:w-1/2">
             <div className="inline-block mb-4">
               <div className="flex items-center gap-2 bg-indigo-100 text-indigo-700 px-4 py-1 rounded-full text-sm font-medium">
@@ -120,7 +122,7 @@ export default function StaffingSolutionsPage() {
             
             <Card className="bg-gradient-to-br from-purple-50 to-indigo-50 border-none">
               <CardHeader>
-                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-indigo-600 mb-2"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/><path d="M19 3v4"/><path d="M21 5h-4"/></svg>
+                <Zap className="h-10 w-10 text-indigo-600 mb-2" />
                 <CardTitle>Client Portal</CardTitle>
               </CardHeader>
               <CardContent>
