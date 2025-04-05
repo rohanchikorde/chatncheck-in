@@ -1,7 +1,7 @@
 
 import * as React from "react";
-import {
-  Toast,
+
+import type {
   ToastActionElement,
   ToastProps,
 } from "@/components/ui/toast";
@@ -43,11 +43,11 @@ type Action =
     }
   | {
       type: ActionType["DISMISS_TOAST"];
-      toastId?: ToasterToast["id"];
+      toastId?: string;
     }
   | {
       type: ActionType["REMOVE_TOAST"];
-      toastId?: ToasterToast["id"];
+      toastId?: string;
     };
 
 interface State {
@@ -65,7 +65,7 @@ const addToRemoveQueue = (toastId: string) => {
     toastTimeouts.delete(toastId);
     dispatch({
       type: actionTypes.REMOVE_TOAST,
-      toastId: toastId,
+      toastId,
     });
   }, TOAST_REMOVE_DELAY);
 
@@ -111,7 +111,6 @@ export const reducer = (state: State, action: Action): State => {
         ),
       };
     }
-
     case actionTypes.REMOVE_TOAST:
       if (action.toastId === undefined) {
         return {
@@ -123,6 +122,8 @@ export const reducer = (state: State, action: Action): State => {
         ...state,
         toasts: state.toasts.filter((t) => t.id !== action.toastId),
       };
+    default:
+      return state;
   }
 };
 
@@ -162,7 +163,7 @@ function toast({ ...props }: Toast) {
   });
 
   return {
-    id: id,
+    id,
     dismiss,
     update,
   };
@@ -188,4 +189,4 @@ function useToast() {
   };
 }
 
-export { useToast, toast };
+export { toast, useToast };
