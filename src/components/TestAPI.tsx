@@ -1,10 +1,12 @@
 
 import React, { useState, useEffect } from 'react';
+import { useToast } from '@/hooks/use-toast';
 
 const TestAPI: React.FC = () => {
   const [testData, setTestData] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const { toast } = useToast();
 
   useEffect(() => {
     const fetchTest = async () => {
@@ -21,17 +23,27 @@ const TestAPI: React.FC = () => {
         console.log('Received data:', data);
         setTestData(data);
         setError(null);
+        toast({
+          title: "API Test Successful",
+          description: "Successfully retrieved data from the API",
+          variant: "default",
+        });
       } catch (err: any) {
         console.error('Error fetching test data:', err);
         setError(err.message || 'An error occurred while fetching data');
         setTestData(null);
+        toast({
+          title: "API Test Failed",
+          description: err.message || 'An error occurred while fetching data',
+          variant: "destructive",
+        });
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchTest();
-  }, []);
+  }, [toast]);
 
   return (
     <div className="p-6 max-w-2xl mx-auto bg-white rounded-lg shadow-md">
