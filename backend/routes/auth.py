@@ -18,9 +18,9 @@ supabase: Client = create_client(url, key)
 auth_bp = Blueprint('auth', __name__)
 
 
-@auth_bp.route('/login', methods=['POST'])
+@auth_bp.route('/loginn', methods=['POST'])
 @cross_origin()
-def login():
+def loginn():
     try:
         print("In Login API")
         print("Request Object:", request)
@@ -160,13 +160,86 @@ def login():
         print("Exception occurred:", str(e))
         return jsonify({'error': str(e)}), 500
 
+
+
+from flask import Blueprint, request, jsonify
+from flask_cors import cross_origin
+
+auth_bp = Blueprint('auth', __name__)
+
+@auth_bp.route('/login', methods=['POST'])
+@cross_origin()
+def login():
+    try:
+        # Log request entry
+        print("In Login API")
+        print("Request Object:", request)
+        
+        # Get and validate JSON data
+        data = request.get_json()
+        print("Request data:", data)
+        
+        if not data or not all(key in data for key in ['email', 'password']):
+            return jsonify({'error': 'Email and password are required'}), 400
+
+        email = data['email']
+        password = data['password']
+        print("Email:", email)
+        # Don't print passwords in production for security reasons
+
+        # Attempt authentication with Supabase
+        try:
+            auth_response = supabase.auth.sign_in_with_password({
+                'email': email,
+                'password': password
+            })
+            
+            # Extract user and session data
+            user = auth_response.user
+            session = auth_response.session
+            
+            print("Authentication successful")
+            
+            # Return successful response
+            return jsonify({
+                'message': 'Login successful',
+                'access_token': session.access_token,
+                'refresh_token': session.refresh_token,
+                'expires_in': session.expires_in,
+                'token_type': session.token_type,
+                'user': {
+                    'id': user.id,
+                    'email': user.email,
+                    'created_at': str(user.created_at),
+                    'last_sign_in_at': str(user.last_sign_in_at)
+                }
+            }), 200
+
+        except Exception as auth_error:
+            print("Authentication error:", str(auth_error))
+            # More specific error handling based on Supabase error types
+            error_msg = str(auth_error)
+            if "invalid login credentials" in error_msg.lower():
+                return jsonify({'error': 'Invalid email or password'}), 401
+            elif "email not confirmed" in error_msg.lower():
+                return jsonify({'error': 'Please confirm your email first'}), 403
+            else:
+                return jsonify({'error': 'Authentication failed'}), 401
+
+    except ValueError as ve:
+        print("Validation error:", str(ve))
+        return jsonify({'error': 'Invalid request format'}), 400
+    except Exception as e:
+        print("Unexpected error:", str(e))
+        return jsonify({'error': 'Internal server error'}), 500
+
+
 @auth_bp.route('/register', methods=['POST'])
 def register_user():
 
-    print("In Register user API", request)
+    logging.info("In Register user API", request)
     data = request.get_json()
 
-    print("Calling register user", data)
     logging.info(f'Received data: {data}')
     required_fields = ['email', 'password', 'full_name', 'phone_number', 'role']
     for field in required_fields:
